@@ -1,8 +1,8 @@
-import webbrowser
 import http.server
 import os
 import threading
 import time
+import webbrowser
 
 
 from http.server import HTTPServer, SimpleHTTPRequestHandler
