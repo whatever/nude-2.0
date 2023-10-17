@@ -23,7 +23,7 @@ def main():
     if args.command == "browse":
        nude2.browse.view()
     elif args.command == "data":
-        nude2.data.connect()
+        nude2.data.main()
 
 
 

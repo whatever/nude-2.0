@@ -82,14 +82,47 @@ CREATE TABLE IF NOT EXISTS met ({", ".join(
 CREATE_MET_IMAGES_TABLE = """
 CREATE TABLE IF NOT EXISTS met_images (
     `Object ID` NUMBER,
-    `Imaeg URL` VARCHAR(255)
+    `Image URL` VARCHAR(255)
 )
 """
 
 
-def connect():
-    with sqlite3.connect(":memory:") as conn:
+CREATE_MET_TAG_TABLE = """
+CREATE TABLE IF NOT EXISTS met_tags (
+    `Object ID` NUMBER,
+    `Tag` VARCHAR(255)
+)
+"""
+
+
+SELECT_MATCHING_TAGS = """
+CREATE VIEW IF NOT EXISTS tagged_images AS
+SELECT
+    `Object ID`,
+    `Object Number`,
+    `Is Highlight`,
+    `Is Timeline Work`,
+    `Is Public Domain`,
+    `Image URL`,
+    `Medium`,
+    `Tags`,
+    `Tag`,
+    `Image URL`
+FROM met
+INNER JOIN met_tags USING (`Object ID`)
+INNER JOIN met_images USING (`Object ID`)
+"""
+
+
+
+class MetData(object):
+    def __init__(self):
+        self.conn = self.connect()
+
+    def connect(self):
+        conn = sqlite3.connect(":memory:")
         curs = conn.cursor()
+
         curs.execute(CREATE_MET_TABLE)
 
         with open(MET_CSV, "r") as fi:
@@ -100,6 +133,7 @@ def connect():
             )
 
         curs.execute(CREATE_MET_IMAGES_TABLE)
+
         with open(IMAGES_CSV, "r") as fi:
             reader = csv.DictReader(fi)
             curs.executemany(
@@ -107,4 +141,58 @@ def connect():
                 (tuple(row.values()) for row in reader),
             )
 
-    raise Exception("make Dataset class")
+        curs.execute(CREATE_MET_TAG_TABLE)
+
+        curs.execute("SELECT `Object ID`, `Tags` FROM met WHERE `Tags` IS NOT NULL AND `Tags` != ''")
+
+        rows = curs.fetchall()
+
+        curs.executemany(
+            "INSERT INTO met_tags VALUES (?, ?)",
+            ((row[0], tag) for row in rows for tag in row[1].split("|")),
+        )
+
+        curs.execute(SELECT_MATCHING_TAGS)
+
+        return conn
+
+    def __len__(self):
+        with self.conn:
+            curs = self.conn.cursor()
+            curs.execute("SELECT COUNT(*) FROM met_images")
+            return curs.fetchone()[0]
+
+    def __getitem__(self, idx):
+        with self.conn:
+            curs = self.conn.cursor()
+            curs.execute(
+                "SELECT * FROM met_images LIMIT 1 OFFSET ?",
+                (idx, ),
+            )
+            return curs.fetchone()
+
+    def select(self, sql):
+        assert sql.upper().startswith("SELECT")
+        with self.conn:
+            curs = self.conn.cursor()
+            curs.execute(sql)
+            return curs.fetchall()
+
+    def fetch_tag(self, tag, medium):
+        with self.conn:
+            curs = self.conn.cursor()
+            curs.execute(
+                "SELECT * FROM tagged_images",
+            )
+            return [row for row in curs.fetchall() if medium in row[-4]]
+
+
+
+def main():
+    conn = MetData()
+
+    print(type(conn))
+    print(len(conn))
+    print(conn[1000])
+    for row in conn.fetch_tag("Sphinx", "oil"):
+        print(row)
