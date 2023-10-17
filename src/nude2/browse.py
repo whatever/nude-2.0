@@ -20,9 +20,18 @@ DIR = os.path.realpath(os.path.join(os.path.dirname(__file__), "static"))
 
 class StaticDirServer(SimpleHTTPRequestHandler):
     """Serve a directory of static files"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIR, **kwargs)
-        print(DIR)
+
+    def do_GET(self):
+        if not self.path.startswith("/api/v0/"):
+            return super().do_GET()
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        self.end_headers()
+        self.wfile.write(b'{"hello": "world"}')
+
 
 
 def serve():

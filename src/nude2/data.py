@@ -181,10 +181,12 @@ class MetData(object):
     def fetch_tag(self, tag, medium):
         with self.conn:
             curs = self.conn.cursor()
-            curs.execute(
-                "SELECT * FROM tagged_images",
-            )
-            return [row for row in curs.fetchall() if medium in row[-4]]
+            curs.execute("SELECT * FROM tagged_images")
+            return [
+                row
+                for row in curs.fetchall()
+                if medium in row[-4]
+            ]
 
 
 
