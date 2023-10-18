@@ -1,16 +1,23 @@
 import csv
-import sqlite3
+import logging
 import os.path
+import requests
+import sqlite3
+import urllib.request
+
 from collections import OrderedDict
 
 
-HERE = os.path.dirname(__file__)
+CACHE_DIR = os.path.expanduser(os.path.join("~", ".cache", "nude2", "data"))
 
 
-IMAGES_CSV = os.path.join(HERE, "static", "met-images.csv")
+IMAGES_CSV = os.path.join(CACHE_DIR, "met-images.csv")
 
 
-MET_CSV = os.path.join(HERE, "static", "MetObjects.csv")
+MET_CSV = os.path.join(CACHE_DIR, "MetObjects.csv")
+
+
+DB = os.path.join(CACHE_DIR, "met.db")
 
 
 MET_COLS = OrderedDict([
@@ -116,11 +123,25 @@ INNER JOIN met_images USING (`Object ID`)
 
 
 class MetData(object):
-    def __init__(self):
-        self.conn = self.connect()
+    """Metroplitan Museum of Art Data"""
 
-    def connect(self):
-        conn = sqlite3.connect(":memory:")
+    def __init__(self, loc=DB):
+        self.loc = loc
+        self.conn = sqlite3.connect(self.loc)
+
+        if not self.is_bootstrapped():
+            logging.warning("Bootstrapping MET data")
+            bootstrap(self)
+
+    def is_bootstrapped(self):
+        """Return whether database has been bootstrapped"""
+        with self.conn as conn:
+            curs = conn.cursor()
+            curs.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = set(row[0] for row in curs.fetchall())
+            return tables == {"met", "met_images", "met_tags"}
+
+    def bootstrap(self):
         curs = conn.cursor()
 
         curs.execute(CREATE_MET_TABLE)
@@ -189,9 +210,29 @@ class MetData(object):
             ]
 
 
+def retrieve_csv_data():
+    """Store CSV's locally"""
+
+    if not os.path.exists(CACHE_DIR):
+        logging.warning("Creating cache directory: %s", CACHE_DIR)
+        os.makedirs(CACHE_DIR)
+
+    if not os.path.exists(MET_CSV):
+        logging.warning("Downloading MET CSV: %s", MET_CSV)
+        MET_CSV_URL = "https://github.com/metmuseum/openaccess/raw/master/MetObjects.csv"
+        urllib.request.urlretrieve(MET_CSV_URL, MET_CSV)
+
+    if not os.path.exists(IMAGES_CSV):
+        logging.warning("Using MET Image CSV: %s", IMAGES_CSV)
+        MET_IMAGES_CSV_URL = "https://github.com/gregsadetsky/open-access-is-great-but-where-are-the-images/raw/main/1.data/met-images.csv"
+        urllib.request.urlretrieve(MET_IMAGES_CSV_URL, IMAGES_CSV)
+
 
 def main():
-    conn = MetData()
+
+    retrieve_csv_data()
+
+    conn = MetData(DB)
 
     print(type(conn))
     print(len(conn))
