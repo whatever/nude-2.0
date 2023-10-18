@@ -80,16 +80,19 @@ MET_COLS = OrderedDict([
 
 CREATE_MET_TABLE = f"""
 CREATE TABLE IF NOT EXISTS met ({", ".join(
-        "  `{k}` {v}".format(k=k, v=v)
-        for k, v in MET_COLS.items()
-    )})"""
+    "  `{k}` {v}".format(k=k, v=v)
+    for k, v in MET_COLS.items()
+)},
+    CONSTRAINT pk_met PRIMARY KEY (`Object ID`)
+)"""
 
 
 
 CREATE_MET_IMAGES_TABLE = """
 CREATE TABLE IF NOT EXISTS met_images (
     `Object ID` NUMBER,
-    `Image URL` VARCHAR(255)
+    `Image URL` VARCHAR(255),
+    CONSTRAINT pk_met_images PRIMARY KEY(`Object ID`, `Image URL`)
 )
 """
 
@@ -97,7 +100,8 @@ CREATE TABLE IF NOT EXISTS met_images (
 CREATE_MET_TAG_TABLE = """
 CREATE TABLE IF NOT EXISTS met_tags (
     `Object ID` NUMBER,
-    `Tag` VARCHAR(255)
+    `Tag` VARCHAR(255),
+    CONSTRAINT pk_met_tag PRIMARY KEY (`Object ID`, `Tag`)
 )
 """
 
@@ -178,15 +182,18 @@ class MetData(object):
             curs.execute(CREATE_MET_IMAGES_TABLE)
             curs.execute(create_index_sql("met_images", ["Object ID"]))
 
+            # XXX: executemany receives a `set` because there are dupes in the csv.
+            # Just fix the csv here first
             with open(IMAGES_CSV, "r") as fi:
                 reader = csv.DictReader(fi)
                 curs.executemany(
                     "INSERT INTO met_images VALUES (?, ?)",
-                    (tuple(row.values()) for row in reader),
+                    {tuple(row.values()) for row in reader},
                 )
 
             curs.execute(CREATE_MET_TAG_TABLE)
             curs.execute(create_index_sql("met_tags", ["Object ID"]))
+            curs.execute(create_index_sql("met_tags", ["Object ID", "Tag"]))
 
             curs.execute("SELECT `Object ID`, `Tags` FROM met WHERE `Tags` IS NOT NULL AND `Tags` != ''")
 
@@ -260,13 +267,5 @@ def retrieve_csv_data():
 
 
 def main():
-
     retrieve_csv_data()
-
     conn = MetData(DB)
-
-    print(type(conn))
-    print(len(conn))
-    print(conn[1000])
-    for row in conn.fetch_tag("Sphinx", "oil"):
-        print(row)
