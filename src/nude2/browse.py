@@ -35,7 +35,11 @@ class StaticDirServer(SimpleHTTPRequestHandler):
         if not self.path.startswith("/api/v0/"):
             return super().do_GET()
 
-        pieces= self.path.split("/", 4)
+        pieces = [
+            v.replace("%20", " ")
+            for v in self.path.split("/", 4)
+        ]
+
         medium, tag = pieces[-2:]
 
         db = nude2.data.MetData(nude2.data.DB)

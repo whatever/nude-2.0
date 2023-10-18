@@ -8,6 +8,7 @@
     html, body {
       font-family: sans-serif;
       font-size: 12pt;
+      background-color: #AAC;
     }
     #sidebar {
       width: 400px;
@@ -15,7 +16,7 @@
     }
 
     #yikes {
-      background-color: red;
+      background-color: #666;
       display: block;
     }
     </style>
@@ -23,26 +24,37 @@
   <body>
 
     <!-- sidebar -->
+    <form id="you-know">
     <table id="sidebar">
       <tr>
         <td><label for="medium">medium</label></td>
-        <td><input placeholder="medium" id="medium" name="medium">
+        <td><input placeholder="medium" id="medium" name="medium"></td>
       </tr>
       <tr>
         <td><label for="tag">tag</label></td>
-        <td><input placeholder="tag" id="tag" name="tag">
+        <td><input value="Diana" placeholder="tag" id="tag" name="tag"></td>
+      </tr>
+      <tr>
+        <td><label for="page">page</label></td>
+        <td><input value="1" placeholder="page" id="page" name="page"></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><input type="submit" id="submitter"></td>
       </tr>
     </table>
+    </form>
 
     <!-- ... -->
     <div id="yikes"></div>
 
     <script>
-      document.getElementById("medium").addEventListener("keypress", query);
 
-      document.getElementById("tag").addEventListener("keypress", query);
+      document.getElementById("you-know").addEventListener("submit", query);
+
 
       function query(ev) {
+        ev.preventDefault();
         var medium = document.getElementById("medium").value;
         var tag = document.getElementById("tag").value;
         grab(medium, tag);
@@ -50,10 +62,6 @@
 
       function grab(medium, tag) {
         var err = undefined;
-
-        if (!medium) {
-          err = "medium must be a non-empty string";
-        }
 
         if (!tag) {
           err = "tag must be a non-empty string";
@@ -78,6 +86,17 @@
 
           var table = document.createElement("TABLE");
 
+          var header = document.createElement("TR");
+          table.appendChild(header);
+
+          var cols = ["Object ID", "Object Number", "Tags", "Medium", "Image URL"];
+
+          cols.forEach(function (c) {
+            var td = document.createElement("TD");
+            td.innerHTML = c;
+            header.appendChild(td);
+          });
+
           v.results.forEach(function (v, i) {
             var tr = document.createElement("TR");
 
@@ -85,6 +104,7 @@
               v["Object ID"],
               v["Object Number"],
               v["Tags"],
+              v["Medium"],
               "<a href=\"" + v["Image URL"] + "\">Link</a>",
             ];
 

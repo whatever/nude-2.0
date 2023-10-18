@@ -216,13 +216,13 @@ class MetData(object):
         with self.conn:
             curs = self.conn.cursor()
             curs.execute(
-                "SELECT * FROM tagged_images LIMIT ?",
-                 (200, ),
+                "SELECT * FROM tagged_images WHERE `Tag` = ? LIMIT ?",
+                 (tag, 200, ),
              )
             return [
                 dict(zip(SELECT_MATCHING_TAGS_COLS, row))
                 for row in curs.fetchall()
-                # if medium in row[-4]
+                if medium in row[-4]
             ]
 
 
