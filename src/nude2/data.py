@@ -217,7 +217,7 @@ class MetData(object):
             curs = self.conn.cursor()
             curs.execute(
                 "SELECT * FROM tagged_images WHERE `Tag` = ? LIMIT ?",
-                 (tag, 200, ),
+                 (tag, 1000, ),
              )
             return [
                 dict(zip(SELECT_MATCHING_TAGS_COLS, row))
