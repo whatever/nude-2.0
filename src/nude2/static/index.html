@@ -4,9 +4,103 @@
     <title>lol</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    html, body {
+      font-family: sans-serif;
+      font-size: 12pt;
+    }
+    #sidebar {
+      width: 400px;
+      display: block;
+    }
+
+    #yikes {
+      background-color: red;
+      display: block;
+    }
+    </style>
   </head>
   <body>
-    ayyyyy
+
+    <!-- sidebar -->
+    <table id="sidebar">
+      <tr>
+        <td><label for="medium">medium</label></td>
+        <td><input placeholder="medium" id="medium" name="medium">
+      </tr>
+      <tr>
+        <td><label for="tag">tag</label></td>
+        <td><input placeholder="tag" id="tag" name="tag">
+      </tr>
+    </table>
+
+    <!-- ... -->
+    <div id="yikes"></div>
+
+    <script>
+      document.getElementById("medium").addEventListener("keypress", query);
+
+      document.getElementById("tag").addEventListener("keypress", query);
+
+      function query(ev) {
+        var medium = document.getElementById("medium").value;
+        var tag = document.getElementById("tag").value;
+        grab(medium, tag);
+      }
+
+      function grab(medium, tag) {
+        var err = undefined;
+
+        if (!medium) {
+          err = "medium must be a non-empty string";
+        }
+
+        if (!tag) {
+          err = "tag must be a non-empty string";
+        }
+
+        var yikes = document.getElementById("yikes");
+
+        if (err) {
+          console.error(err);
+          yikes.innerHTML = err;
+          return;
+        }
+
+        yikes.innerHTML = "";
+
+
+        var url = "/api/v0/" + medium + "/" + tag;
+
+        fetch(url).then(function (res) {
+          return res.json();
+        }).then(function (v) {
+
+          var table = document.createElement("TABLE");
+
+          v.results.forEach(function (v, i) {
+            var tr = document.createElement("TR");
+
+            let row = [
+              v["Object ID"],
+              v["Object Number"],
+              v["Tags"],
+              "<a href=\"" + v["Image URL"] + "\">Link</a>",
+            ];
+
+            row.forEach(function (content) {
+              var td = document.createElement("TD");
+              td.innerHTML = content;
+              tr.appendChild(td);
+            });
+
+            table.appendChild(tr);
+          });
+          yikes.appendChild(table)
+        });
+
+      }
+    </script>
   </body>
 </html>
 

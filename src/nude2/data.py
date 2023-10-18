@@ -21,7 +21,7 @@ DB = os.path.join(CACHE_DIR, "met.db")
 
 
 MET_COLS = OrderedDict([
-    ("Object Number", "NUMBER"),
+    ("Object Number", "VARCHAR(256)"),
     ("Is Highlight", "BOOL"),
     ("Is Timeline Work", "BOOL"),
     ("Is Public Domain", "BOOL"),
@@ -100,6 +100,19 @@ CREATE TABLE IF NOT EXISTS met_tags (
     `Tag` VARCHAR(255)
 )
 """
+
+SELECT_MATCHING_TAGS_COLS = [
+    "Object ID",
+    "Object Number",
+    "Is Highlight",
+    "Is Timeline Work",
+    "Is Public Domain",
+    "Image URL",
+    "Medium",
+    "Tags",
+    "Tag",
+    "Image URL",
+]
 
 
 SELECT_MATCHING_TAGS = """
@@ -202,11 +215,14 @@ class MetData(object):
     def fetch_tag(self, tag, medium):
         with self.conn:
             curs = self.conn.cursor()
-            curs.execute("SELECT * FROM tagged_images")
+            curs.execute(
+                "SELECT * FROM tagged_images LIMIT ?",
+                 (200, ),
+             )
             return [
-                row
+                dict(zip(SELECT_MATCHING_TAGS_COLS, row))
                 for row in curs.fetchall()
-                if medium in row[-4]
+                # if medium in row[-4]
             ]
 
 
