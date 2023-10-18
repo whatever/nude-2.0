@@ -133,6 +133,14 @@ INNER JOIN met_tags USING (`Object ID`)
 INNER JOIN met_images USING (`Object ID`)
 """
 
+def create_index_sql(table_name, cols):
+    sanitized_cols = [c.lower().replace(" ", "") for c in cols]
+    cols = [f"`{c}`" for c in cols]
+    return f"""
+    CREATE INDEX IF NOT EXISTS `idx__{table_name}__{'_'.join(sanitized_cols)}`
+    ON {table_name} ({", ".join(cols)})
+    """
+
 
 class MetData(object):
     """Metroplitan Museum of Art Data"""
@@ -143,7 +151,7 @@ class MetData(object):
 
         if not self.is_bootstrapped():
             logging.warning("Bootstrapping MET data")
-            bootstrap(self)
+            self.bootstrap()
 
     def is_bootstrapped(self):
         """Return whether database has been bootstrapped"""
@@ -154,40 +162,48 @@ class MetData(object):
             return tables == {"met", "met_images", "met_tags"}
 
     def bootstrap(self):
-        curs = conn.cursor()
+        with self.conn as conn:
+            curs = conn.cursor()
 
-        curs.execute(CREATE_MET_TABLE)
+            curs.execute(CREATE_MET_TABLE)
+            curs.execute(create_index_sql("met", ["Object ID"]))
 
-        with open(MET_CSV, "r") as fi:
-            reader = csv.DictReader(fi)
+            with open(MET_CSV, "r") as fi:
+                reader = csv.DictReader(fi)
+                curs.executemany(
+                    f"INSERT INTO met VALUES ({', '.join('?' * len(MET_COLS))})",
+                    (tuple(row.values()) for row in reader),
+                )
+
+            curs.execute(CREATE_MET_IMAGES_TABLE)
+            curs.execute(create_index_sql("met_images", ["Object ID"]))
+
+            with open(IMAGES_CSV, "r") as fi:
+                reader = csv.DictReader(fi)
+                curs.executemany(
+                    "INSERT INTO met_images VALUES (?, ?)",
+                    (tuple(row.values()) for row in reader),
+                )
+
+            curs.execute(CREATE_MET_TAG_TABLE)
+            curs.execute(create_index_sql("met_tags", ["Object ID"]))
+
+            curs.execute("SELECT `Object ID`, `Tags` FROM met WHERE `Tags` IS NOT NULL AND `Tags` != ''")
+
+            rows = curs.fetchall()
+
             curs.executemany(
-                f"INSERT INTO met VALUES ({', '.join('?' * len(MET_COLS))})",
-                (tuple(row.values()) for row in reader),
+                "INSERT INTO met_tags VALUES (?, ?)",
+                ((row[0], tag) for row in rows for tag in row[1].split("|")),
             )
 
-        curs.execute(CREATE_MET_IMAGES_TABLE)
+            curs.execute(SELECT_MATCHING_TAGS)
 
-        with open(IMAGES_CSV, "r") as fi:
-            reader = csv.DictReader(fi)
-            curs.executemany(
-                "INSERT INTO met_images VALUES (?, ?)",
-                (tuple(row.values()) for row in reader),
-            )
+        with self.conn as conn:
+            curs = conn.cursor()
+            curs.execute("VACUUM")
 
-        curs.execute(CREATE_MET_TAG_TABLE)
-
-        curs.execute("SELECT `Object ID`, `Tags` FROM met WHERE `Tags` IS NOT NULL AND `Tags` != ''")
-
-        rows = curs.fetchall()
-
-        curs.executemany(
-            "INSERT INTO met_tags VALUES (?, ?)",
-            ((row[0], tag) for row in rows for tag in row[1].split("|")),
-        )
-
-        curs.execute(SELECT_MATCHING_TAGS)
-
-        return conn
+        logging.warning("Finished bootstrapping");
 
     def __len__(self):
         with self.conn:
