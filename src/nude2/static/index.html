@@ -76,10 +76,6 @@
       function grab(medium, tag) {
         var err = undefined;
 
-        if (!tag) {
-          err = "tag must be a non-empty string";
-        }
-
         var yikes = document.getElementById("yikes");
 
         if (err) {
@@ -88,21 +84,22 @@
           return;
         }
 
-        yikes.innerHTML = "";
-
-
         var url = "/api/v0/" + medium + "/" + tag;
 
         fetch(url).then(function (res) {
           return res.json();
         }).then(function (v) {
 
+          console.log(v);
+
+          yikes.innerHTML = "<h3>Showings " + v.results.length + " results:</h3>\n";
+
           var table = document.createElement("TABLE");
 
           var header = document.createElement("TR");
           table.appendChild(header);
 
-          var cols = ["Object ID", "Object Number", "Tags", "Medium", "Image URL"];
+          var cols = ["Object ID", "Object Number", "Object Name", "Title", "Tags", "Medium", "Image URL"];
 
           cols.forEach(function (c) {
             var td = document.createElement("TD");
@@ -116,6 +113,8 @@
             let row = [
               v["Object ID"],
               v["Object Number"],
+              v["Object Name"],
+              v["Title"],
               v["Tags"],
               v["Medium"],
               "<a href=\"" + v["Image URL"] + "\">Link</a>",

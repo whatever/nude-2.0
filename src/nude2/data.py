@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import logging
 import os.path
 import requests
@@ -107,7 +108,9 @@ CREATE TABLE IF NOT EXISTS met_tags (
 
 SELECT_MATCHING_TAGS_COLS = [
     "Object ID",
+    "Title",
     "Object Number",
+    "Object Name",
     "Is Highlight",
     "Is Timeline Work",
     "Is Public Domain",
@@ -119,19 +122,10 @@ SELECT_MATCHING_TAGS_COLS = [
 ]
 
 
-SELECT_MATCHING_TAGS = """
+SELECT_MATCHING_TAGS = f"""
 CREATE VIEW IF NOT EXISTS tagged_images AS
 SELECT
-    `Object ID`,
-    `Object Number`,
-    `Is Highlight`,
-    `Is Timeline Work`,
-    `Is Public Domain`,
-    `Image URL`,
-    `Medium`,
-    `Tags`,
-    `Tag`,
-    `Image URL`
+    {", ".join(f"`{c}`" for c in SELECT_MATCHING_TAGS_COLS)}
 FROM met
 INNER JOIN met_tags USING (`Object ID`)
 INNER JOIN met_images USING (`Object ID`)
@@ -235,12 +229,26 @@ class MetData(object):
             return curs.fetchall()
 
     def fetch_tag(self, tag, medium):
+        Q = """
+        WITH filtered_images AS (
+            SELECT *
+            FROM tagged_images
+            WHERE
+                COALESCE(?, '') = ''
+                OR
+                `Tag` = ?
+            )
+            SELECT *
+            FROM filtered_images
+            WHERE
+                `Medium` LIKE '%' || ? || '%'
+                AND
+                `Object Name` IN ('Painting')
+            LIMIT ?
+        """
         with self.conn:
             curs = self.conn.cursor()
-            curs.execute(
-                "SELECT * FROM tagged_images WHERE `Tag` = ? LIMIT ?",
-                 (tag, 9999, ),
-             )
+            curs.execute(Q, (tag, tag, medium, 9999, ))
             return [
                 dict(zip(SELECT_MATCHING_TAGS_COLS, row))
                 for row in curs.fetchall()
@@ -266,6 +274,32 @@ def retrieve_csv_data():
         urllib.request.urlretrieve(MET_IMAGES_CSV_URL, IMAGES_CSV)
 
 
+class MetImageGetter(object):
+    """Loading Cache for Met Images"""
+
+    def __init__(self, cache_dir="~/.cache/nude2/images/"):
+        """Construct..."""
+        self.cache_dir = os.path.expanduser(cache_dir)
+
+    def fetch(self, image_url):
+        """Return a PIL image """
+
+        if not os.path.exists(self.cache_dir):
+            logging.warning("Creating image cache directory: %s", self.cache_dir)
+            os.makedirs(self.cache_dir)
+
+        _, suf = os.path.splitext(image_url)
+
+        sha = hashlib.sha256()
+        sha.update(image_url.encode())
+        file_name = os.path.join(self.cache_dir, f"met-image-{sha.hexdigest().lower()}{suf.lower()}")
+
+        urllib.request.urlretrieve(image_url, file_name)
+
+
+
 def main():
     retrieve_csv_data()
     conn = MetData(DB)
+    getter = MetImageGetter()
+    getter.fetch("https://images.metmuseum.org/CRDImages/aa/original/sfsb54.46.37(6-6-07)s1.JPG")
