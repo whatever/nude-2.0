@@ -134,7 +134,6 @@ INNER JOIN met_images USING (`Object ID`)
 """
 
 
-
 class MetData(object):
     """Metroplitan Museum of Art Data"""
 
@@ -217,7 +216,7 @@ class MetData(object):
             curs = self.conn.cursor()
             curs.execute(
                 "SELECT * FROM tagged_images WHERE `Tag` = ? LIMIT ?",
-                 (tag, 1000, ),
+                 (tag, 9999, ),
              )
             return [
                 dict(zip(SELECT_MATCHING_TAGS_COLS, row))
