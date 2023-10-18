@@ -4,17 +4,18 @@ import time
 
 
 def main():
+
     db = nude2.data.MetData(nude2.data.DB)
 
     tags = ["Sphinx", "Crucifixion", "Male Nudes", "Female Nudes", "asdasd", ""]
 
     mediums = ["oil", ""]
 
-    cases = [
+    cases = sorted(
         (tag, medium)
         for tag in tags
         for medium in mediums
-    ]
+    )
 
     for tag, medium in cases:
         start = datetime.now()
