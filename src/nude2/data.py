@@ -314,7 +314,7 @@ class MetImageGetter(object):
                 urllib.request.urlretrieve(image_url, ftemp)
                 shutil.move(ftemp, fpath)
             except:
-                logger.exception("Failed to download image: %s", image_url)
+                logger.error("Failed to download image: %s", image_url)
                 return None
 
         return fpath
