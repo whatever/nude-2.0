@@ -1,12 +1,19 @@
+import PIL.Image
 import csv
 import hashlib
 import logging
+import multiprocessing.dummy
 import os.path
 import requests
+import shutil
 import sqlite3
+import tempfile
 import urllib.request
 
 from collections import OrderedDict
+
+
+logger = logging.getLogger(__name__)
 
 
 CACHE_DIR = os.path.expanduser(os.path.join("~", ".cache", "nude2", "data"))
@@ -148,7 +155,7 @@ class MetData(object):
         self.conn = sqlite3.connect(self.loc)
 
         if not self.is_bootstrapped():
-            logging.warning("Bootstrapping MET data")
+            logger.info("Bootstrapping MET data")
             self.bootstrap()
 
     def is_bootstrapped(self):
@@ -204,7 +211,7 @@ class MetData(object):
             curs = conn.cursor()
             curs.execute("VACUUM")
 
-        logging.warning("Finished bootstrapping");
+        logger.info("Finished bootstrapping");
 
     def __len__(self):
         with self.conn:
@@ -244,11 +251,10 @@ class MetData(object):
                 `Medium` LIKE '%' || ? || '%'
                 AND
                 `Object Name` IN ('Painting')
-            LIMIT ?
         """
         with self.conn:
             curs = self.conn.cursor()
-            curs.execute(Q, (tag, tag, medium, 9999, ))
+            curs.execute(Q, (tag, tag, medium, ))
             return [
                 dict(zip(SELECT_MATCHING_TAGS_COLS, row))
                 for row in curs.fetchall()
@@ -260,16 +266,16 @@ def retrieve_csv_data():
     """Store CSV's locally"""
 
     if not os.path.exists(CACHE_DIR):
-        logging.warning("Creating cache directory: %s", CACHE_DIR)
+        logger.info("Creating cache directory: %s", CACHE_DIR)
         os.makedirs(CACHE_DIR)
 
     if not os.path.exists(MET_CSV):
-        logging.warning("Downloading MET CSV: %s", MET_CSV)
+        logger.info("Downloading MET CSV: %s", MET_CSV)
         MET_CSV_URL = "https://github.com/metmuseum/openaccess/raw/master/MetObjects.csv"
         urllib.request.urlretrieve(MET_CSV_URL, MET_CSV)
 
     if not os.path.exists(IMAGES_CSV):
-        logging.warning("Using MET Image CSV: %s", IMAGES_CSV)
+        logger.info("Using MET Image CSV: %s", IMAGES_CSV)
         MET_IMAGES_CSV_URL = "https://github.com/gregsadetsky/open-access-is-great-but-where-are-the-images/raw/main/1.data/met-images.csv"
         urllib.request.urlretrieve(MET_IMAGES_CSV_URL, IMAGES_CSV)
 
@@ -280,26 +286,66 @@ class MetImageGetter(object):
     def __init__(self, cache_dir="~/.cache/nude2/images/"):
         """Construct..."""
         self.cache_dir = os.path.expanduser(cache_dir)
+        self.temp_dir = tempfile.mkdtemp(prefix="met-images-")
+        print(self.temp_dir)
+
+    def __del__(self):
+        shutil.rmtree(self.temp_dir)
 
     def fetch(self, image_url):
         """Return a PIL image """
 
         if not os.path.exists(self.cache_dir):
-            logging.warning("Creating image cache directory: %s", self.cache_dir)
+            logger.info("Creating image cache directory: %s", self.cache_dir)
             os.makedirs(self.cache_dir)
 
         _, suf = os.path.splitext(image_url)
 
         sha = hashlib.sha256()
         sha.update(image_url.encode())
-        file_name = os.path.join(self.cache_dir, f"met-image-{sha.hexdigest().lower()}{suf.lower()}")
 
-        urllib.request.urlretrieve(image_url, file_name)
+        fname = f"met-image-{sha.hexdigest().lower()}{suf.lower()}"
+        ftemp = os.path.join(self.temp_dir, fname)
+        fpath = os.path.join(self.cache_dir, fname)
+
+        if not os.path.exists(fpath):
+            logger.debug("Downloading image: %s", image_url)
+            try:
+                urllib.request.urlretrieve(image_url, ftemp)
+                shutil.move(ftemp, fpath)
+            except:
+                logger.exception("Failed to download image: %s", image_url)
+                return None
+
+        return fpath
 
 
 
-def main():
+def main(concurrency, limit):
     retrieve_csv_data()
     conn = MetData(DB)
     getter = MetImageGetter()
-    getter.fetch("https://images.metmuseum.org/CRDImages/aa/original/sfsb54.46.37(6-6-07)s1.JPG")
+
+    # Get all paintins
+    rows = conn.fetch_tag("", "")
+
+    with multiprocessing.dummy.Pool(concurrency) as pool:
+        pool.map(
+            getter.fetch,
+            (row["Image URL"] for row in rows[:limit]),
+        )
+
+
+    print(len(rows))
+
+    # styles = conn.select("""SELECT
+    #     `Object Name`,
+    #     COUNT(*) as cnt
+    # FROM met
+    # GROUP BY `Object Name`
+    # HAVING cnt > 1000
+    # ORDER BY cnt, `Object Name`
+    # """)
+
+    # for sty in styles:
+    #     print(sty)
