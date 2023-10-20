@@ -6,6 +6,5 @@
 *.pt
 *.swp
 *.tar.gz
-*.zip
 .DS_Store
 __pycache__
