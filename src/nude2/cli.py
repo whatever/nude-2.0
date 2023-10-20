@@ -4,6 +4,7 @@ import nude2.benchmark
 import nude2.browse
 import nude2.data
 import nude2.progress
+import nude2.train
 
 def main():
     parser = argparse.ArgumentParser()
@@ -20,6 +21,10 @@ def main():
 
     progress_parser = subparsers.add_parser("progress")
 
+    train_parser = subparsers.add_parser("train")
+    train_parser.add_argument("--epochs", type=int, default=10)
+    train_parser.add_argument("--batch-size", type=int, default=8)
+
     args = parser.parse_args()
 
     if args.command == "browse":
@@ -30,3 +35,5 @@ def main():
         nude2.benchmark.main()
     elif args.command == "progress":
         nude2.progress.main()
+    elif args.command == "train":
+        nude2.train.main(args.epochs, args.batch_size)

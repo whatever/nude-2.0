@@ -1,16 +1,22 @@
 import PIL.Image
 import csv
 import hashlib
+import json
 import logging
 import multiprocessing.dummy
+import numpy as np
 import os.path
 import requests
 import shutil
 import sqlite3
 import tempfile
+import torch
+import torchvision
 import urllib.request
 
 from collections import OrderedDict
+from glob import glob
+from torch.utils.data import Dataset, DataLoader
 
 
 logger = logging.getLogger(__name__)
@@ -138,6 +144,20 @@ INNER JOIN met_tags USING (`Object ID`)
 INNER JOIN met_images USING (`Object ID`)
 """
 
+
+SELECT_TAGGED_MET_IMAGES_SQL = """
+WITH matched_object_ids AS (
+    SELECT DISTINCT
+        `Object ID`
+    FROM met_tags
+    WHERE `Tag` IN ?
+)
+SELECT
+    *
+FROM met_images
+INNER JOIN matched_object_ids USING (`Object ID`)
+"""
+
 def create_index_sql(table_name, cols):
     sanitized_cols = [c.lower().replace(" ", "") for c in cols]
     cols = [f"`{c}`" for c in cols]
@@ -228,14 +248,20 @@ class MetData(object):
             )
             return curs.fetchone()
 
-    def select(self, sql):
+    def select(self, sql, params=tuple()):
         assert sql.upper().startswith("SELECT")
         with self.conn:
             curs = self.conn.cursor()
-            curs.execute(sql)
+            curs.execute(sql, params)
             return curs.fetchall()
 
     def fetch_tag(self, tag, medium):
+        """Return artworks with a given tag"""
+
+        tag = tag or ""
+
+        medium = medium or ""
+
         Q = """
         WITH filtered_images AS (
             SELECT *
@@ -249,8 +275,6 @@ class MetData(object):
             FROM filtered_images
             WHERE
                 `Medium` LIKE '%' || ? || '%'
-                AND
-                `Object Name` IN ('Painting')
         """
         with self.conn:
             curs = self.conn.cursor()
@@ -258,7 +282,6 @@ class MetData(object):
             return [
                 dict(zip(SELECT_MATCHING_TAGS_COLS, row))
                 for row in curs.fetchall()
-                if medium in row[-4]
             ]
 
 
@@ -283,10 +306,11 @@ def retrieve_csv_data():
 class MetImageGetter(object):
     """Loading Cache for Met Images"""
 
-    def __init__(self, cache_dir="~/.cache/nude2/images/"):
+    def __init__(self, cache_dir="~/.cache/nude2/images/", download=True):
         """Construct..."""
         self.cache_dir = os.path.expanduser(cache_dir)
         self.temp_dir = tempfile.mkdtemp(prefix="met-images-")
+        self.download = download
         print(self.temp_dir)
 
     def __del__(self):
@@ -294,6 +318,8 @@ class MetImageGetter(object):
 
     def fetch(self, image_url):
         """Return a PIL image """
+
+        image_url = image_url.replace(" ", "%20")
 
         if not os.path.exists(self.cache_dir):
             logger.info("Creating image cache directory: %s", self.cache_dir)
@@ -309,8 +335,11 @@ class MetImageGetter(object):
         fpath = os.path.join(self.cache_dir, fname)
 
         if not os.path.exists(fpath):
+            if not self.download:
+                return None
             logger.debug("Downloading image: %s", image_url)
             try:
+                print("Retrieving!")
                 urllib.request.urlretrieve(image_url, ftemp)
                 shutil.move(ftemp, fpath)
             except:
@@ -320,23 +349,208 @@ class MetImageGetter(object):
         return fpath
 
 
+class MetDataset(Dataset):
+    """Configurable dataset"""
+
+    crop = torchvision.transforms.Compose([
+        torchvision.transforms.Resize((256, 256)),
+        torchvision.transforms.CenterCrop(224),
+    ])
+
+    tensorify = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+    ])
+
+    SELECT_QUERY = """
+    SELECT
+        `Object ID`,
+        `Object Name`,
+        `Title`,
+        `Tags`,
+        `Image URL`
+    FROM met_images
+    INNER JOIN met
+    USING (`Object ID`)
+    WHERE `Object Name` = 'Painting'
+    """.strip()
+
+    COUNT_QUERY = """
+    SELECT
+        COUNT(*)
+    FROM met_images
+    INNER JOIN met
+    USING (`Object ID`)
+    WHERE `Object Name` = 'Painting'
+    """.strip()
+
+    def __init__(self, tags, cache_dir="~/.cache/nude2/", force_refresh=False):
+        self.cache_dir = os.path.expanduser(cache_dir)
+        self.base_images_dir = os.path.join(self.cache_dir, "images")
+        self.augmented_images_dir = os.path.join(self.cache_dir, "images-augmented")
+
+        self.db = MetData(DB)
+        self.fetcher = MetImageGetter(self.base_images_dir, download=False)
+
+        base_rows = self.db.select(self.SELECT_QUERY)
+        self.rows = list(self.augmentations(base_rows))
+
+    five_crop = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(336),
+        torchvision.transforms.FiveCrop(224),
+    ])
+
+    tensorify = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+    ])
+
+    def fetch_crops(self, row):
+        image_path = self.fetcher.fetch(row[-1])
+        prefix, suffix = os.path.splitext(os.path.basename(image_path))
+        crop_fnames = glob(os.path.join(self.augmented_images_dir, f"{prefix}-[0-4]-0.jpg"))
+
+        crop_fnames = [
+            os.path.join(self.augmented_images_dir, f"{prefix}-{i}-0.jpg")
+            for i in range(5)
+        ]
+
+        crops = []
+
+        if all(os.path.exists(fname) for fname in crop_fnames):
+            for fname in crop_fnames:
+                with PIL.Image.open(fname) as i:
+                    crops.append(i)
+
+        else:
+            logger.warning("Generating new images for {prefix}")
+            try:
+                with PIL.Image.open(image_path) as i:
+                    img = i.convert("RGB").copy()
+                    crops = self.five_crop(img)
+                    for i, c in enumerate(crops):
+                        fpath = os.path.join(self.augmented_images_dir, f"{prefix}-{i}-0.jpg")
+                        c.save(fpath)
+            except PIL.Image.DecompressionBombError:
+                logger.error("Decompression bomb error on image: %s", image_path)
+
+        return crops
+
+    def augmentations(self, rows):
+
+        if not os.path.exists(self.augmented_images_dir):
+            os.makedirs(self.augmented_images_dir)
+
+        for row in rows:
+
+            image_path = self.fetcher.fetch(row[-1])
+
+            if image_path is None:
+                continue
+
+            crops = self.fetch_crops(row)
+
+            object_id = row[0]
+            original_path = image_path
+
+            fname, suffix = os.path.splitext(os.path.basename(image_path))
+
+            for i, c in enumerate(crops):
+                aug_fname = f"{fname}-{i}-0{suffix}"
+                aug_path = os.path.join(self.augmented_images_dir, aug_fname)
+
+                if not os.path.exists(aug_path):
+                    print("SAVE!")
+                    c.save(aug_path)
+
+                res = {
+                    "fname": aug_fname,
+                    "path": aug_path,
+                    "nude": "Nude" in row[-2],
+                    "base_image_path": row[-1],
+                }
+
+                yield res
+
+    def save_augmentation_labels(self):
+        augmented_labels_dir = os.path.join(self.cache_dir, "labels-augmented")
+
+        if not os.path.exists(augmented_labels_dir):
+            os.makedirs(augmented_labels_dir)
+
+        for row in self.rows:
+            image_prefix, _ = os.path.splitext(row["fname"])
+            label_path = os.path.join(augmented_labels_dir, f"{image_prefix}.json")
+            row["label_path"] = label_path
+
+            with open(label_path, "w") as fo:
+                json.dump(row, fo)
+
+
+    def __len__(self):
+        return len(self.rows)
+
+    def __getitem__(self, idx):
+        with PIL.Image.open(self.rows[idx]["path"]) as i:
+            row = self.rows[idx]
+            row["image"] = self.tensorify(np.array(i))
+            return row
+
 
 def main(concurrency, limit):
+    data = MetDataset(["Nude Males", "Nude Females"])
+    batches = DataLoader(data, batch_size=2)
+    data.save_augmentation_labels()
+
+
+
+
+def main2(concurrency, limit):
     retrieve_csv_data()
     conn = MetData(DB)
-    getter = MetImageGetter()
+    getter = MetImageGetter(download=False)
 
     # Get all paintins
     rows = conn.fetch_tag("", "")
 
+    image_urls = {
+        row["Image URL"]
+        for row in rows
+    }
+
+    rows = conn.select("""
+    SELECT
+        `Object Name`,
+        COUNT(*) as cnt
+    FROM tagged_images
+    GROUP BY `Object Name`
+    HAVING cnt > 1000
+    ORDER BY cnt DESC
+    LIMIT 10
+    """.strip())
+
+    for row in rows:
+        print(row)
+
+    rows = conn.select("""SELECT COUNT(*) FROM tagged_images WHERE `Object Name` = 'Painting'""".strip())
+
+    print(rows)
+
+    return
+
     with multiprocessing.dummy.Pool(concurrency) as pool:
-        pool.map(
+        results = pool.map(
             getter.fetch,
-            (row["Image URL"] for row in rows[:limit]),
+            (url.replace(" ", "%20") for url in image_urls),
         )
 
+    succeeded = len([row for row in results if row is not None])
 
-    print(len(rows))
+    failed = len([row for row in results if row is None])
+
+    print("succeeded .....", succeeded)
+    print("failed ........", failed)
+    print("total .........", len(results))
+    print("rows ..........", len(rows))
 
     # styles = conn.select("""SELECT
     #     `Object Name`,
