@@ -2,7 +2,7 @@ import torch
 import torchvision
 
 
-from nude2.train import Generator
+from nude2.train import Generator, weights_init
 from nude2.data import MetCenterCroppedDataset
 
 def main(checkpoint):
@@ -10,6 +10,7 @@ def main(checkpoint):
     states = torch.load(checkpoint)
 
     g = Generator()
+    g.apply(weights_init)
     g.load_state_dict(states["g"])
     torch.rand(1, 1, 100, 100)
 
