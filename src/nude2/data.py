@@ -563,3 +563,34 @@ def main2(concurrency, limit):
 
     # for sty in styles:
     #     print(sty)
+
+
+class MetCenterCroppedDataset(Dataset):
+
+    image_size = 64
+
+    tensorify = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(image_size),
+        torchvision.transforms.CenterCrop(image_size),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+
+    def __init__(self, cache_dir="~/.cache/nude2/"):
+        self.cache_dir = os.path.expanduser(cache_dir)
+        self.image_dir = os.path.join(self.cache_dir, "images")
+        self.fnames = glob(os.path.join(self.image_dir, "*.jpg"))
+        self.cache = {}
+
+    def __len__(self):
+        return len(self.fnames)
+
+    def __getitem__(self, idx):
+        if idx not in self.cache:
+            try:
+                with PIL.Image.open(self.fnames[idx]) as i:
+                    self.cache[idx] = self.tensorify(i.convert("RGB"))
+            except PIL.Image.DecompressionBombWarning:
+                print("!!")
+        return self.cache[idx]
+
