@@ -7,6 +7,7 @@ from datetime import datetime
 
 
 import logging
+import os.path
 import torch.utils.data as data
 import torch
 import torch.nn as nn
@@ -146,19 +147,22 @@ images_path = "~/.cache/nude2/celeba"
 
 
 
-def main(num_epochs, batch_size):
+def main(data_folder, num_epochs, batch_size):
 
     splash("splash")
     print("\n\n")
     print("NUDE 2.0")
     print("========")
+    print(f"data .......... \033[95m{data_folder}\033[00m")
     print(f"epochs ........ \033[95m{num_epochs}\033[00m")
     print(f"batch size .... \033[95m{batch_size}\033[00m")
     print(f"data path ..... \033[95m{images_path}\033[00m")
     print(f"device ........ \033[95m{device}\033[00m")
     print()
 
-    dataset = nude2.data.MetCenterCroppedDataset()
+    data_dir = os.path.expanduser(data_folder)
+
+    dataset = nude2.data.MetCenterCroppedDataset(data_dir)
 
     dataloader = data.DataLoader(
         dataset,
@@ -168,10 +172,10 @@ def main(num_epochs, batch_size):
         prefetch_factor=20,
     )
 
-    g = Generator()
+    g = Generator().to(device)
     g.apply(weights_init)
 
-    d = Discriminator()
+    d = Discriminator().to(device)
     d.apply(weights_init)
 
     criterion = nn.BCELoss()
@@ -244,8 +248,8 @@ def main(num_epochs, batch_size):
         dur = datetime.utcnow() - start
 
         torch.save({
-            "g": netG.state_dict(),
-            "d": netD.state_dict(),
+            "g": g.state_dict(),
+            "d": d.state_dict(),
             "epoch": epoch,
         }, checkpoint_path)
     

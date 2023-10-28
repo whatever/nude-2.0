@@ -578,7 +578,7 @@ class MetCenterCroppedDataset(Dataset):
 
     def __init__(self, cache_dir="~/.cache/nude2/"):
         self.cache_dir = os.path.expanduser(cache_dir)
-        self.image_dir = os.path.join(self.cache_dir, "images")
+        self.image_dir = self.cache_dir
         self.fnames = glob(os.path.join(self.image_dir, "*.jpg"))
         self.cache = {}
 
@@ -591,6 +591,7 @@ class MetCenterCroppedDataset(Dataset):
                 with PIL.Image.open(self.fnames[idx]) as i:
                     self.cache[idx] = self.tensorify(i.convert("RGB"))
             except PIL.Image.DecompressionBombError:
+                print("fname =", self.fnames[idx])
                 return None
             except PIL.Image.DecompressionBombWarning:
                 print("!!")

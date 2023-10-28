@@ -22,6 +22,7 @@ def main():
     progress_parser = subparsers.add_parser("progress")
 
     train_parser = subparsers.add_parser("train")
+    train_parser.add_argument("--data", type=str, required=True)
     train_parser.add_argument("--epochs", type=int, default=10)
     train_parser.add_argument("--batch-size", type=int, default=8)
 
@@ -36,4 +37,4 @@ def main():
     elif args.command == "progress":
         nude2.progress.main()
     elif args.command == "train":
-        nude2.train.main(args.epochs, args.batch_size)
+        nude2.train.main(args.data, args.epochs, args.batch_size)
