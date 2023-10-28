@@ -65,7 +65,7 @@ ngpu = 1
 device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
 
 # Checkpoint path
-checkpoint_path = "drive/MyDrive/Colab Checkpoints/nude2-dcgan.pt"
+checkpoint_path = "nude2-dcgan.pt"
 
 
 def weights_init(m):
@@ -152,13 +152,21 @@ def main(num_epochs, batch_size):
     print("\n\n")
     print("NUDE 2.0")
     print("========")
-    print(f"epochs ........ {num_epochs}")
-    print(f"batch size .... {batch_size}")
-    print(f"data path ..... {images_path}")
+    print(f"epochs ........ \033[95m{num_epochs}\033[00m")
+    print(f"batch size .... \033[95m{batch_size}\033[00m")
+    print(f"data path ..... \033[95m{images_path}\033[00m")
+    print(f"device ........ \033[95m{device}\033[00m")
+    print()
 
     dataset = nude2.data.MetCenterCroppedDataset()
 
-    dataloader = data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=workers)
+    dataloader = data.DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=workers,
+        prefetch_factor=20,
+    )
 
     g = Generator()
     g.apply(weights_init)
@@ -190,9 +198,9 @@ def main(num_epochs, batch_size):
 
         start = datetime.utcnow()
 
-        logger.info(f"Epoch {epoch}")
+        logger.info(f"Epoch={epoch}")
 
-        with ProgressBar(len(dataloader)) as progress:
+        with ProgressBar(len(dataloader), size=40) as progress:
             for i, imgs in enumerate(dataloader):
 
                 # Discriminate against real data
@@ -234,6 +242,12 @@ def main(num_epochs, batch_size):
                 progress.inc()
 
         dur = datetime.utcnow() - start
+
+        torch.save({
+            "g": netG.state_dict(),
+            "d": netD.state_dict(),
+            "epoch": epoch,
+        }, checkpoint_path)
     
 
 

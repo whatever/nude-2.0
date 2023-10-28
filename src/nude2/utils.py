@@ -12,4 +12,3 @@ def splash(splash_name):
     with open(fname, "r") as f:
         txt = f.read()
         print(f"\033[95m{txt}\033[00m")
-

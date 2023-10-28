@@ -590,6 +590,8 @@ class MetCenterCroppedDataset(Dataset):
             try:
                 with PIL.Image.open(self.fnames[idx]) as i:
                     self.cache[idx] = self.tensorify(i.convert("RGB"))
+            except PIL.Image.DecompressionBombError:
+                return None
             except PIL.Image.DecompressionBombWarning:
                 print("!!")
         return self.cache[idx]
