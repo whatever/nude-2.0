@@ -32,7 +32,7 @@ logger.setLevel(logging.INFO)
 dataroot = "celeba"
 
 # Number of workers for dataloader
-workers = 2
+workers = 0
 
 # Batch size during training
 batch_size = 1024
@@ -169,7 +169,7 @@ def main(data_folder, num_epochs, batch_size):
         batch_size=batch_size,
         shuffle=True,
         num_workers=workers,
-        prefetch_factor=20,
+        # prefetch_factor=2,
     )
 
     g = Generator().to(device)
