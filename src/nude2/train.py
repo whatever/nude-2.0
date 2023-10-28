@@ -190,7 +190,7 @@ def main(data_folder, num_epochs, batch_size, checkpoint_path):
         g.load_state_dict(states["g"])
         d.load_state_dict(states["d"])
         epoch = states["epoch"] + 1
-        logger.info(f"Loaded at {epoch}")
+        logger.info(f"Loaded at {epoch-1}")
     except FileNotFoundError:
         logger.warn("Could not find specified checkpoint... starting GAN at epoch=0")
         epoch = 0
