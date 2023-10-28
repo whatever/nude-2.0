@@ -576,6 +576,12 @@ class MetCenterCroppedDataset(Dataset):
         torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ])
 
+    pilify = torchvision.transforms.Compose([
+        torchvision.transforms.Normalize(mean=[0., 0., 0.], std=[1/0.5, 1/0.5, 1/0.5]),
+        torchvision.transforms.Normalize(mean=[-0.5, -0.5, -0.5], std=[1., 1., 1.]),
+        torchvision.transforms.ToPILImage(),
+    ])
+
     def __init__(self, cache_dir="~/.cache/nude2/"):
         self.cache_dir = os.path.expanduser(cache_dir)
         self.image_dir = self.cache_dir
@@ -596,4 +602,3 @@ class MetCenterCroppedDataset(Dataset):
             except PIL.Image.DecompressionBombWarning:
                 print("!!")
         return self.cache[idx]
-

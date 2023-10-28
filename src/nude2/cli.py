@@ -3,6 +3,7 @@ import argparse
 import nude2.benchmark
 import nude2.browse
 import nude2.data
+import nude2.generate
 import nude2.progress
 import nude2.train
 
@@ -25,6 +26,10 @@ def main():
     train_parser.add_argument("--data", type=str, required=True)
     train_parser.add_argument("--epochs", type=int, default=10)
     train_parser.add_argument("--batch-size", type=int, default=8)
+    train_parser.add_argument("--checkpoint", type=str, required=True)
+
+    generate_parser = subparsers.add_parser("generate")
+    generate_parser.add_argument("--checkpoint", type=str, required=True)
 
     args = parser.parse_args()
 
@@ -37,4 +42,6 @@ def main():
     elif args.command == "progress":
         nude2.progress.main()
     elif args.command == "train":
-        nude2.train.main(args.data, args.epochs, args.batch_size)
+        nude2.train.main(args.data, args.epochs, args.batch_size, args.checkpoint)
+    elif args.command == "generate":
+        nude2.generate.main(args.checkpoint)

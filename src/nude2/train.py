@@ -65,9 +65,6 @@ ngpu = 1
 # Set device
 device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
 
-# Checkpoint path
-checkpoint_path = "nude2-dcgan.pt"
-
 
 def weights_init(m):
     """Normalize weights"""
@@ -147,7 +144,7 @@ images_path = "~/.cache/nude2/celeba"
 
 
 
-def main(data_folder, num_epochs, batch_size):
+def main(data_folder, num_epochs, batch_size, checkpoint_path):
 
     splash("splash")
     print("\n\n")
