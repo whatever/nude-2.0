@@ -581,7 +581,6 @@ class MetCenterCroppedDataset(Dataset):
         self.image_dir = self.cache_dir
         self.fnames = glob(os.path.join(self.image_dir, "*.jpg"))
         self.cache = {}
-        print("Iniitializing CACHE!")
 
     def __len__(self):
         return len(self.fnames)
