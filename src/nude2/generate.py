@@ -12,7 +12,6 @@ def main(checkpoint):
     g = Generator()
     g.apply(weights_init)
     g.load_state_dict(states["g"])
-    torch.rand(1, 1, 100, 100)
 
     fixed_noise = torch.randn(1, 100, 1, 1)
     vec = g(fixed_noise)

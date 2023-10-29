@@ -5,11 +5,12 @@ import sys
 class ProgressBar(object):
     """..."""
 
-    def __init__(self, limit, size=100):
+    def __init__(self, limit, prefix="", size=100):
+        self.prefix = prefix
         self.size = size
         self.limit = limit
         self.current = 0
-        self.line = "[" + " "*self.size + "]"
+        self.line = self.prefix + "[" + " "*self.size + "]"
         self.show()
 
     def x_x(self):
@@ -20,7 +21,7 @@ class ProgressBar(object):
         pct = self.current / self.limit
         pct = round(pct * self.size)
         sys.stdout.write("\b"*len(self.line))
-        self.line = "[" + "*"*pct + " "*(self.size-pct) + "] " + self.x_x()
+        self.line = self.prefix + "[" + "*"*pct + " "*(self.size-pct) + "] " + self.x_x()
         self.line += f" {100*self.current/self.limit:0.2f}%\r"
         sys.stdout.write(self.line)
         sys.stdout.flush()

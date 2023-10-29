@@ -3,24 +3,27 @@ DCGAN stolen from
 """
 
 
-from datetime import datetime
-
-
+import json
 import logging
+import nude2.data
+import os
 import os.path
-import torch.utils.data as data
+import random
 import torch
 import torch.nn as nn
+import torch.optim
+import torch.utils.data as data
 import torchvision
 
-
-import torch.optim
-
-import nude2.data
-
+from datetime import datetime
 from nude2.progress import ProgressBar
 from nude2.utils import splash
 
+
+# manualSeed = 999
+# random.seed(manualSeed)
+# torch.manual_seed(manualSeed)
+# torch.use_deterministic_algorithms(True)
 
 LOG_FORMAT = "\033[95m%(asctime)s\033[00m [%(levelname)s] %(message)s"
 logging.basicConfig(format=LOG_FORMAT)
@@ -144,18 +147,33 @@ images_path = "~/.cache/nude2/celeba"
 
 
 
-def main(data_folder, num_epochs, batch_size, checkpoint_path):
+def main(data_folder, num_epochs, batch_size, checkpoint_path, samples_path):
 
     splash("splash")
     print("\n\n")
     print("NUDE 2.0")
     print("========")
     print(f"data .......... \033[95m{data_folder}\033[00m")
-    print(f"epochs ........ \033[95m{num_epochs}\033[00m")
+    print(f"epochs ........ \033[96m{num_epochs}\033[00m")
     print(f"batch size .... \033[95m{batch_size}\033[00m")
     print(f"data path ..... \033[95m{images_path}\033[00m")
     print(f"device ........ \033[95m{device}\033[00m")
+    print(f"checkpoint .... \033[95m{checkpoint_path}\033[00m")
+    print(f"samples path .. \033[95m{samples_path}\033[00m")
     print()
+
+    if samples_path is not None:
+        os.makedirs(samples_path, exist_ok=True)
+        with open(os.path.join(samples_path, "meta.json"), "w") as f:
+            json.dump({
+                "data_folder": data_folder,
+                "num_epochs": num_epochs,
+                "batch_size": batch_size,
+                "checkpoint_path": checkpoint_path,
+                "samples_path": samples_path,
+                "lr": lr,
+                "beta1": beta1,
+            }, f)
 
     data_dir = os.path.expanduser(data_folder)
 
@@ -199,9 +217,7 @@ def main(data_folder, num_epochs, batch_size, checkpoint_path):
 
         start = datetime.utcnow()
 
-        logger.info(f"Epoch={epoch}")
-
-        with ProgressBar(len(dataloader), size=40) as progress:
+        with ProgressBar(len(dataloader), prefix=f"[epoch={epoch:04d}/{num_epochs}] ", size=40) as progress:
             for i, imgs in enumerate(dataloader):
 
                 # Discriminate against real data
@@ -239,8 +255,16 @@ def main(data_folder, num_epochs, batch_size, checkpoint_path):
                 D_G_z2 = output.mean().item()
                 optimizerG.step()
 
-                # Print out progress
+                # inc
                 progress.inc()
+
+        sample = g(fixed_noise).detach().cpu()
+
+        if samples_path is not None:
+            for i in range(sample.size(0)):
+                img = nude2.data.MetCenterCroppedDataset.pilify(sample[i])
+                fname = f"sample-{epoch:04d}-{i:02d}.jpg"
+                img.save(os.path.join(samples_path, fname))
 
         dur = datetime.utcnow() - start
 
@@ -249,6 +273,3 @@ def main(data_folder, num_epochs, batch_size, checkpoint_path):
             "d": d.state_dict(),
             "epoch": epoch,
         }, checkpoint_path)
-    
-
-
