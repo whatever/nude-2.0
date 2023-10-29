@@ -2,10 +2,27 @@ import random
 import time
 import sys
 
+
+class Progress(object):
+    """..."""
+
+    def __init__(self, iterable, prefix="", size=100, clear=True):
+        pass
+
+    def __iter__(self):
+        for i in self.iterable:
+            yield i
+            self.show()
+
+    def show(self):
+        pass
+
+
 class ProgressBar(object):
     """..."""
 
-    def __init__(self, limit, prefix="", size=100):
+    def __init__(self, limit, prefix="", size=100, clear=True):
+        self.clear = clear
         self.prefix = prefix
         self.size = size
         self.limit = limit
@@ -30,11 +47,17 @@ class ProgressBar(object):
         self.current += 1
         self.show()
 
+    def set(self, value):
+        self.current = value
+        self.show()
+
     def __enter__(self):
         return self
 
     def __exit__(self, type, value, traceback):
         print(self.line)
+        if self.clear:
+            sys.stdout.write("\b"*len(self.line))
 
 def main():
     with ProgressBar(300) as progress:

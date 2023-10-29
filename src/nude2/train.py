@@ -213,11 +213,13 @@ def main(data_folder, num_epochs, batch_size, checkpoint_path, samples_path):
         logger.warn("Could not find specified checkpoint... starting GAN at epoch=0")
         epoch = 0
 
+    last_epoch = epoch + num_epochs
+
     for epoch in range(epoch, epoch + num_epochs):
 
         start = datetime.utcnow()
 
-        with ProgressBar(len(dataloader), prefix=f"[epoch={epoch:04d}/{num_epochs}] ", size=40) as progress:
+        with ProgressBar(len(dataloader), prefix=f"[epoch={epoch:04d}/{last_epoch}] ", size=40) as progress:
             for i, imgs in enumerate(dataloader):
 
                 # Discriminate against real data
