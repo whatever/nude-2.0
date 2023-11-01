@@ -1,8 +1,10 @@
 import PIL.Image
 import csv
+import ctypes
 import hashlib
 import json
 import logging
+import multiprocessing as mp
 import multiprocessing.dummy
 import numpy as np
 import os.path
@@ -15,6 +17,7 @@ import torchvision
 import urllib.request
 
 from collections import OrderedDict
+from datetime import datetime
 from glob import glob
 from torch.utils.data import Dataset, DataLoader
 
@@ -496,75 +499,6 @@ class MetDataset(Dataset):
             return row
 
 
-def main(concurrency, limit):
-    data = MetDataset(["Nude Males", "Nude Females"])
-    batches = DataLoader(data, batch_size=2)
-    data.save_augmentation_labels()
-
-
-
-
-def main2(concurrency, limit):
-    retrieve_csv_data()
-    conn = MetData(DB)
-    getter = MetImageGetter(download=False)
-
-    # Get all paintins
-    rows = conn.fetch_tag("", "")
-
-    image_urls = {
-        row["Image URL"]
-        for row in rows
-    }
-
-    rows = conn.select("""
-    SELECT
-        `Object Name`,
-        COUNT(*) as cnt
-    FROM tagged_images
-    GROUP BY `Object Name`
-    HAVING cnt > 1000
-    ORDER BY cnt DESC
-    LIMIT 10
-    """.strip())
-
-    for row in rows:
-        print(row)
-
-    rows = conn.select("""SELECT COUNT(*) FROM tagged_images WHERE `Object Name` = 'Painting'""".strip())
-
-    print(rows)
-
-    return
-
-    with multiprocessing.dummy.Pool(concurrency) as pool:
-        results = pool.map(
-            getter.fetch,
-            (url.replace(" ", "%20") for url in image_urls),
-        )
-
-    succeeded = len([row for row in results if row is not None])
-
-    failed = len([row for row in results if row is None])
-
-    print("succeeded .....", succeeded)
-    print("failed ........", failed)
-    print("total .........", len(results))
-    print("rows ..........", len(rows))
-
-    # styles = conn.select("""SELECT
-    #     `Object Name`,
-    #     COUNT(*) as cnt
-    # FROM met
-    # GROUP BY `Object Name`
-    # HAVING cnt > 1000
-    # ORDER BY cnt, `Object Name`
-    # """)
-
-    # for sty in styles:
-    #     print(sty)
-
-
 class MetCenterCroppedDataset(Dataset):
 
     image_size = 64
@@ -602,3 +536,91 @@ class MetCenterCroppedDataset(Dataset):
             except PIL.Image.DecompressionBombWarning:
                 print("!!")
         return self.cache[idx]
+
+
+class MetFiveCornerDataset(Dataset):
+    """Five corners + flip"""
+
+    uncropped_size = 96
+
+    cropped_size = 64
+
+    tencrop = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(uncropped_size),
+        torchvision.transforms.TenCrop(cropped_size),
+    ])
+
+    tensorify = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+
+    pilify = torchvision.transforms.Compose([
+        torchvision.transforms.Normalize(mean=[0., 0., 0.], std=[1/0.5, 1/0.5, 1/0.5]),
+        torchvision.transforms.Normalize(mean=[-0.5, -0.5, -0.5], std=[1., 1., 1.]),
+        torchvision.transforms.ToPILImage(),
+    ])
+
+    def __init__(self, cache_dir="~/.cache/nude2/"):
+        """..."""
+
+        self.cache_dir = os.path.expanduser(cache_dir)
+        self.image_dir = self.cache_dir
+        self.fnames = glob(os.path.join(self.image_dir, "*.jpg"))
+        self.fnames = self.fnames[0:300]
+
+        self.hits = mp.Array(ctypes.c_bool, len(self.fnames))
+
+        n = 10*len(self.fnames)
+        c = 3
+        w = h = self.cropped_size
+
+        shared_array_base = mp.Array(ctypes.c_float, n * c * w * h)
+        shared_array = np.ctypeslib.as_array(shared_array_base.get_obj())
+        shared_array = shared_array.reshape(n, c, h, w)
+        self.cache = torch.from_numpy(shared_array)
+
+    def __len__(self):
+        return 10 * len(self.fnames)
+
+    def __getitem__(self, idx):
+        i = idx // 10
+
+        hit = self.hits[i]
+
+        if self.hits[i] == False:
+            self.hits[i] = True
+            with PIL.Image.open(self.fnames[i]) as raw_img:
+                for j, cropped_image in enumerate(self.tencrop(raw_img)):
+                    assert 0 <= j < 10
+                    self.cache[10*i+j] = self.tensorify(cropped_image.convert("RGB"))
+
+        return hit, self.cache[idx]
+
+
+def main(concurrency, limit):
+    dataset = MetFiveCornerDataset(cache_dir="~/.cache/nude2/images/")
+    dataloader = DataLoader(dataset, batch_size=1, num_workers=0)
+
+    print("should be all misses:")
+
+    i = 0
+
+    for hit, x in dataloader:
+        i += 1
+
+    print("first pass =", i)
+
+    print("should be all hits:")
+
+    i = 0
+
+    for epoch in range(10):
+        start = datetime.now()
+
+        for hit, x in dataloader:
+            pass
+        
+        dur = (datetime.now() - start).total_seconds()
+
+        print("Duration:", dur)
