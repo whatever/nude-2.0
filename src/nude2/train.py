@@ -143,20 +143,17 @@ class Generator(nn.Module):
 
 
 
-images_path = "~/.cache/nude2/celeba"
-
-
-
 def main(data_folder, num_epochs, batch_size, checkpoint_path, samples_path):
+
+    data_dir = os.path.expanduser(data_folder)
 
     splash("splash")
     print("\n\n")
     print("NUDE 2.0")
     print("========")
-    print(f"data .......... \033[95m{data_folder}\033[00m")
+    print(f"data .......... \033[95m{data_dir}\033[00m")
     print(f"epochs ........ \033[96m{num_epochs}\033[00m")
     print(f"batch size .... \033[95m{batch_size}\033[00m")
-    print(f"data path ..... \033[95m{images_path}\033[00m")
     print(f"device ........ \033[95m{device}\033[00m")
     print(f"checkpoint .... \033[95m{checkpoint_path}\033[00m")
     print(f"samples path .. \033[95m{samples_path}\033[00m")
@@ -174,8 +171,6 @@ def main(data_folder, num_epochs, batch_size, checkpoint_path, samples_path):
                 "lr": lr,
                 "beta1": beta1,
             }, f)
-
-    data_dir = os.path.expanduser(data_folder)
 
     dataset = nude2.data.MetCenterCroppedDataset(data_dir)
 
