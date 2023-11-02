@@ -625,6 +625,17 @@ class MetFiveCornerDataset(Dataset):
             with PIL.Image.open(self.fnames[i]) as raw_img:
                 for j, cropped_image in enumerate(self.tencrop(raw_img.convert("RGB"))):
                     assert 0 <= j < 10
+
+                    f, s = os.path.splitext(os.path.basename(self.fnames[i]))
+
+                    foutname = os.path.join(
+                        os.path.expanduser("~/.cache/nude2/images-tencrop"),
+                        f"{f}-{i}-{j}{s}",
+                    )
+
+                    print(foutname)
+
+                    cropped_image.save(foutname)
                     self.cache[10*i+j] = self.tensorify(cropped_image)
             self.hits[i] = True
 
@@ -635,7 +646,7 @@ def main(concurrency, limit):
 
     dataset = MetFiveCornerDataset(cache_dir="~/.cache/nude2/images/")
 
-    dataloader = DataLoader(dataset, batch_size=100, num_workers=8, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=100, num_workers=0, shuffle=False)
 
     for epoch in range(10):
         print(f"epoch = {epoch}")
