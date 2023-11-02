@@ -617,9 +617,11 @@ class MetFiveCornerDataset(Dataset):
         fname = self.fnames[i]
         fname = os.path.basename(fname)
 
-        is_nude =  fname in self.nude_file_names
+        is_nude = fname in self.nude_file_names
 
         if self.hits[i] == False:
+            PIL.Image.MAX_IMAGE_PIXELS = 343934400 + 1
+            PIL.Image.MAX_IMAGE_PIXELS = 757164160 + 1
             with PIL.Image.open(self.fnames[i]) as raw_img:
                 for j, cropped_image in enumerate(self.tencrop(raw_img.convert("RGB"))):
                     assert 0 <= j < 10
@@ -630,9 +632,10 @@ class MetFiveCornerDataset(Dataset):
 
 
 def main(concurrency, limit):
-    dataset = MetFiveCornerDataset(cache_dir="~/.cache/nude2/images/")
-    dataloader = DataLoader(dataset, batch_size=1, num_workers=8, shuffle=True)
 
+    dataset = MetFiveCornerDataset(cache_dir="~/.cache/nude2/images/")
+
+    dataloader = DataLoader(dataset, batch_size=100, num_workers=8, shuffle=True)
 
     for epoch in range(10):
         print(f"epoch = {epoch}")
