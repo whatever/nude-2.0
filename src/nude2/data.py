@@ -306,6 +306,14 @@ def retrieve_csv_data():
         urllib.request.urlretrieve(MET_IMAGES_CSV_URL, IMAGES_CSV)
 
 
+def get_image_file_name(image_url):
+    """..."""
+    _, suf = os.path.splitext(image_url)
+    sha = hashlib.sha256()
+    sha.update(image_url.encode())
+    return f"met-image-{sha.hexdigest().lower()}{suf.lower()}"
+
+
 class MetImageGetter(object):
     """Loading Cache for Met Images"""
 
@@ -386,7 +394,7 @@ class MetDataset(Dataset):
     WHERE `Object Name` = 'Painting'
     """.strip()
 
-    def __init__(self, tags, cache_dir="~/.cache/nude2/", force_refresh=False):
+    def __init__(self, tags, cache_dir="~/.cache/nude2/", tag_db="", force_refresh=False):
         self.cache_dir = os.path.expanduser(cache_dir)
         self.base_images_dir = os.path.join(self.cache_dir, "images")
         self.augmented_images_dir = os.path.join(self.cache_dir, "images-augmented")
@@ -564,12 +572,28 @@ class MetFiveCornerDataset(Dataset):
     def __init__(self, cache_dir="~/.cache/nude2/"):
         """..."""
 
+        with sqlite3.connect(DB) as conn:
+            curs = conn.cursor()
+            curs.execute("""
+            SELECT
+                `Image URL`
+            FROM met_images
+            INNER JOIN met_tags USING (`Object ID`)
+            WHERE `Tag` LIKE '%Nude%'
+            """.strip())
+            self.nude_file_names = {
+                get_image_file_name(row[0])
+                for row in curs.fetchall()
+            }
+
+
         self.cache_dir = os.path.expanduser(cache_dir)
         self.image_dir = self.cache_dir
         self.fnames = glob(os.path.join(self.image_dir, "*.jpg"))
-        self.fnames = self.fnames[0:300]
-
+        self.fnames = self.fnames
+        # self.fnames = self.fnames[0:100]
         self.hits = mp.Array(ctypes.c_bool, len(self.fnames))
+
 
         n = 10*len(self.fnames)
         c = 3
@@ -581,41 +605,38 @@ class MetFiveCornerDataset(Dataset):
         self.cache = torch.from_numpy(shared_array)
 
     def __len__(self):
+        """Return the length of the dataset"""
         return 10 * len(self.fnames)
 
     def __getitem__(self, idx):
+        """Return the image at the given point"""
         i = idx // 10
 
         hit = self.hits[i]
 
-        if self.hits[i] == False:
-            self.hits[i] = True
-            with PIL.Image.open(self.fnames[i]) as raw_img:
-                for j, cropped_image in enumerate(self.tencrop(raw_img)):
-                    assert 0 <= j < 10
-                    self.cache[10*i+j] = self.tensorify(cropped_image.convert("RGB"))
+        fname = self.fnames[i]
+        fname = os.path.basename(fname)
 
-        return hit, self.cache[idx]
+        is_nude =  fname in self.nude_file_names
+
+        if self.hits[i] == False:
+            with PIL.Image.open(self.fnames[i]) as raw_img:
+                for j, cropped_image in enumerate(self.tencrop(raw_img.convert("RGB"))):
+                    assert 0 <= j < 10
+                    self.cache[10*i+j] = self.tensorify(cropped_image)
+            self.hits[i] = True
+
+        return is_nude, self.cache[idx]
 
 
 def main(concurrency, limit):
     dataset = MetFiveCornerDataset(cache_dir="~/.cache/nude2/images/")
-    dataloader = DataLoader(dataset, batch_size=1, num_workers=0)
+    dataloader = DataLoader(dataset, batch_size=1, num_workers=8, shuffle=True)
 
-    print("should be all misses:")
-
-    i = 0
-
-    for hit, x in dataloader:
-        i += 1
-
-    print("first pass =", i)
-
-    print("should be all hits:")
-
-    i = 0
 
     for epoch in range(10):
+        print(f"epoch = {epoch}")
+
         start = datetime.now()
 
         for hit, x in dataloader:
