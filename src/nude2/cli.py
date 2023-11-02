@@ -28,6 +28,7 @@ def main():
     train_parser.add_argument("--batch-size", type=int, default=8)
     train_parser.add_argument("--checkpoint", type=str, required=True)
     train_parser.add_argument("--samples-path", type=str)
+    train_parser.add_argument("--seed", type=int, default=42069)
 
     generate_parser = subparsers.add_parser("generate")
     generate_parser.add_argument("--checkpoint", type=str, required=True)
@@ -49,6 +50,7 @@ def main():
             args.batch_size,
             args.checkpoint,
             args.samples_path,
+            seed=args.seed,
         )
     elif args.command == "generate":
         nude2.generate.main(args.checkpoint)

@@ -20,11 +20,6 @@ from nude2.progress import ProgressBar
 from nude2.utils import splash
 
 
-# manualSeed = 999
-# random.seed(manualSeed)
-# torch.manual_seed(manualSeed)
-# torch.use_deterministic_algorithms(True)
-
 LOG_FORMAT = "\033[95m%(asctime)s\033[00m [%(levelname)s] %(message)s"
 logging.basicConfig(format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
@@ -143,7 +138,13 @@ class Generator(nn.Module):
 
 
 
-def main(data_folder, num_epochs, batch_size, checkpoint_path, samples_path):
+def main(data_folder, num_epochs, batch_size, checkpoint_path, samples_path, seed=None):
+
+    if seed is not None:
+        manualSeed = 999
+        random.seed(manualSeed)
+        torch.manual_seed(manualSeed)
+        torch.use_deterministic_algorithms(True)
 
     data_dir = os.path.expanduser(data_folder)
 
@@ -265,7 +266,7 @@ def main(data_folder, num_epochs, batch_size, checkpoint_path, samples_path):
 
         dur = datetime.utcnow() - start
 
-        torch.save({
+        res = torch.save({
             "g": g.state_dict(),
             "d": d.state_dict(),
             "epoch": epoch,

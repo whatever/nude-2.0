@@ -642,7 +642,125 @@ class MetFiveCornerDataset(Dataset):
         return is_nude, self.cache[idx]
 
 
+class CachedDataset(Dataset):
+
+    uncropped_size = 64
+
+    cropped_size = 64
+
+    tensorify = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+
+    pilify = torchvision.transforms.Compose([
+        torchvision.transforms.Normalize(mean=[0., 0., 0.], std=[1/0.5, 1/0.5, 1/0.5]),
+        torchvision.transforms.Normalize(mean=[-0.5, -0.5, -0.5], std=[1., 1., 1.]),
+        torchvision.transforms.ToPILImage(),
+    ])
+
+    def __init__(self, image_dir, cache_dir):
+
+        self.image_dir = os.path.expanduser(image_dir)
+
+        self.cache_dir = os.path.expanduser(cache_dir)
+
+        self.image_fnames = [
+            fname
+            for suffix in ["jpg"]
+            for fname in glob(os.path.join(self.image_dir, f"*.{suffix}"))
+        ]
+
+        self.transforms = [
+
+            # Standard center-crop
+            torchvision.transforms.Compose([
+                torchvision.transforms.Resize(self.cropped_size),
+                torchvision.transforms.CenterCrop(self.cropped_size),
+            ]),
+
+            # Horizontal flip
+            torchvision.transforms.Compose([
+                torchvision.transforms.Resize(self.cropped_size),
+                torchvision.transforms.CenterCrop(self.cropped_size),
+                torchvision.transforms.RandomHorizontalFlip(1.0),
+            ]),
+        ]
+
+        self.transforms += [
+            # Random crop and jitter
+            torchvision.transforms.Compose([
+                torchvision.transforms.Resize(self.uncropped_size, antialias=False),
+                torchvision.transforms.CenterCrop(self.cropped_size),
+                torchvision.transforms.RandomHorizontalFlip(0.5),
+                torchvision.transforms.RandomCrop(self.cropped_size),
+            ]),
+        ] * 3
+
+
+        print("len =", len(self.transforms))
+        print("len =", len(self.image_fnames))
+
+
+    def get_filename(self, idx):
+        """Return the filename"""
+        i = idx // len(self.transforms)
+        return self.image_fnames[i]
+
+
+    def get_source_image(self, idx):
+        """Return the source image for an index"""
+        with PIL.Image.open(self.get_filename(idx)) as i:
+            return i
+
+    def __len__(self):
+        """Return the total number of augmented images"""
+        return len(self.transforms) * len(self.image_fnames)
+
+    def __getitem__(self, idx):
+        """Return an image as a tensor from the dataset"""
+
+        i = idx // len(self.transforms)
+        r = idx % len(self.transforms)
+
+        cache_fname = f"image-{i}-{r}.jpg"
+        cache_fpath = os.path.join(self.cache_dir, cache_fname)
+
+        if not os.path.exists(cache_fpath):
+            fname = self.get_filename(idx)
+
+            PIL.Image.MAX_IMAGE_PIXELS = 757164160 + 1
+
+            with PIL.Image.open(fname) as img:
+                for j, t in enumerate(self.transforms):
+                    img = t(img.convert("RGB"))
+                    arr = self.tensorify(img)
+
+                    with tempfile.NamedTemporaryFile(prefix="image-", suffix=".jpg", delete=False) as fo:
+                        img.save(fo.name)
+
+                    dest_fname = f"image-{i}-{j}.jpg"
+                    dest_fpath = os.path.join(self.cache_dir, dest_fname)
+                
+                    shutil.move(
+                        fo.name,
+                        dest_fpath,
+                    )
+
+        with PIL.Image.open(cache_fpath) as img:
+            return self.tensorify(img)
+
+
+
 def main(concurrency, limit):
+
+    dataset = CachedDataset("~/images/", "~/images-random-crops")
+    dataloader = DataLoader(dataset, batch_size=100, num_workers=8, shuffle=True)
+
+    for row in dataloader:
+        pass
+
+    return
 
     dataset = MetFiveCornerDataset(cache_dir="~/.cache/nude2/images/")
 
