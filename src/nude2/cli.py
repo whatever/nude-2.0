@@ -5,6 +5,7 @@ import nude2.browse
 import nude2.data
 import nude2.generate
 import nude2.progress
+import nude2.sample
 import nude2.train
 
 def main():
@@ -31,7 +32,13 @@ def main():
     train_parser.add_argument("--seed", type=int, default=42069)
 
     generate_parser = subparsers.add_parser("generate")
-    generate_parser.add_argument("--checkpoint", type=str, required=True)
+    generate_parser.add_argument("--checkpoint", type=str)
+    generate_parser.add_argument("--samples", type=str)
+
+    sample_parser = subparsers.add_parser("sample")
+    sample_parser.add_argument("--checkpoint", type=str)
+    sample_parser.add_argument("--samples", type=str)
+    sample_parser.add_argument("-o", "--out", type=str)
 
     args = parser.parse_args()
 
@@ -54,3 +61,6 @@ def main():
         )
     elif args.command == "generate":
         nude2.generate.main(args.checkpoint)
+    elif args.command == "sample":
+        nude2.sample.main(args.samples, args.out)
+

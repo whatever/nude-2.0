@@ -2,6 +2,7 @@
 *.egg-info
 *.jpg
 *.json
+*.mp4
 *.png
 *.pt
 *.swp
