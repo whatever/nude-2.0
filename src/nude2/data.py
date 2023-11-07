@@ -549,9 +549,9 @@ class MetCenterCroppedDataset(Dataset):
 class MetFiveCornerDataset(Dataset):
     """Five corners + flip"""
 
-    uncropped_size = 96
+    uncropped_size = 256
 
-    cropped_size = 64
+    cropped_size = 128
 
     tencrop = torchvision.transforms.Compose([
         torchvision.transforms.Resize(uncropped_size),
@@ -644,9 +644,9 @@ class MetFiveCornerDataset(Dataset):
 
 class CachedDataset(Dataset):
 
-    uncropped_size = 64
+    uncropped_size = 256
 
-    cropped_size = 64
+    cropped_size = 128
 
     tensorify = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
@@ -690,16 +690,14 @@ class CachedDataset(Dataset):
         self.transforms += [
             # Random crop and jitter
             torchvision.transforms.Compose([
-                torchvision.transforms.Resize(self.uncropped_size, antialias=False),
-                torchvision.transforms.CenterCrop(self.cropped_size),
-                torchvision.transforms.RandomHorizontalFlip(0.5),
+                torchvision.transforms.Resize(self.uncropped_size),
                 torchvision.transforms.RandomCrop(self.cropped_size),
+                torchvision.transforms.RandomHorizontalFlip(0.5),
             ]),
         ] * 3
 
 
-        print("len =", len(self.transforms))
-        print("len =", len(self.image_fnames))
+        os.makedirs(self.cache_dir, exist_ok=True)
 
 
     def get_filename(self, idx):

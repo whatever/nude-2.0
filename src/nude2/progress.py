@@ -2,8 +2,6 @@ import random
 import time
 import sys
 
-import tqdm
-
 from datetime import datetime
 
 class ProgressBar(object):
