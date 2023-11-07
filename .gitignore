@@ -1,0 +1,12 @@
+*.avi
+*.egg-info
+*.jpg
+*.json
+*.mp4
+*.png
+*.pt
+*.swp
+*.tar.gz
+.DS_Store
+.ipynb_checkpoints/
+__pycache__

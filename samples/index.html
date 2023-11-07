@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="sp">
+  <head>
+    <title>samples</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background-color: white;
+        color: black;
+        font-family: sans-serif;
+      }
+    </style>
+    <script>
+      window.addEventListener("load", function () {
+        let el = document.getElementById("container");
+
+        let epochs = 1024;
+
+        let table = document.createElement("table");
+        el.appendChild(table);
+
+        for (let i=0; i < epochs; i++) {
+          let tr = document.createElement("tr");
+          let td = document.createElement("td");
+          td.innerHTML = "Epoch=" + i.toString().padStart(4, "0");
+          tr.appendChild(td);
+          for (let j=0; j < 16; j++) {
+            let td = document.createElement("td");
+            let img = new Image();
+            img.src = "sample-" + i.toString().padStart(4, "0") + "-" + j.toString().padStart(2, "0") + ".jpg";
+            td.appendChild(img);
+            tr.appendChild(td)
+          }
+          table.appendChild(tr);
+        }
+
+      });
+    </script>
+  </head>
+  <body>
+    <center><div id="container"></div></center>
+  </body>
+</html>
