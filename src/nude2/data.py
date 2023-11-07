@@ -644,9 +644,9 @@ class MetFiveCornerDataset(Dataset):
 
 class CachedDataset(Dataset):
 
-    uncropped_size = 256
+    uncropped_size = 384
 
-    cropped_size = 128
+    cropped_size = 256
 
     tensorify = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),

@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from nude2.train_constants import *
+
 
 class Discriminator(nn.Module):
     """Module to discriminate between real and fake images"""

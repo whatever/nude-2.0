@@ -22,6 +22,8 @@ from nude2.utils import splash
 from nude2.model import Generator, Discriminator
 from nude2.train_constants import *
 
+import nude2.model_v1 as model_v1
+
 
 LOG_FORMAT = "\033[95m%(asctime)s\033[00m [%(levelname)s] %(message)s"
 logging.basicConfig(format=LOG_FORMAT)
@@ -76,6 +78,8 @@ def main(data_folder, num_epochs, batch_size, checkpoint_path, samples_path, see
                 "beta1": beta1,
             }, f)
 
+    # dataset = nude2.data.MetCenterCroppedDataset(data_dir)
+
     dataset = nude2.data.CachedDataset(
         data_dir,
         "~/.cache/nude2/images-random-crop-256x256",
@@ -93,6 +97,13 @@ def main(data_folder, num_epochs, batch_size, checkpoint_path, samples_path, see
 
     d = Discriminator().to(device)
     d.apply(weights_init)
+    
+    total_params = sum(
+        param.numel()
+        for param in g.parameters()
+    )
+
+    print("Total params =", total_params)
 
     criterion = nn.BCELoss()
 
@@ -133,9 +144,7 @@ def main(data_folder, num_epochs, batch_size, checkpoint_path, samples_path, see
                     dtype=torch.float,
                     device=device,
                 )
-                output = d(real_cpu)
-
-                output = output.view(-1)
+                output = d(real_cpu).view(-1)
                 errD_real = criterion(output, label)
                 errD_real.backward()
                 D_x = output.mean().item()
@@ -145,9 +154,7 @@ def main(data_folder, num_epochs, batch_size, checkpoint_path, samples_path, see
                 fake = g(noise)
                 label.fill_(fake_label)
 
-                output = d(fake.detach())
-
-                output = output.view(-1)
+                output = d(fake.detach()).view(-1)
                 errD_fake = criterion(output, label)
 
                 errD_fake.backward()
