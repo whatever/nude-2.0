@@ -17,15 +17,15 @@ class Discriminator(nn.Module):
             nn.Conv2d(nc, ndf,              4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(ndf, ndf * 2,         4, 2, 1, bias=False),
+            nn.Conv2d(ndf, ndf * 2,         5, 2, 1, bias=False),
             nn.BatchNorm2d(ndf * 2),
             nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(ndf * 2, ndf * 4,     5, 3, 1, bias=False),
+            nn.Conv2d(ndf * 2, ndf * 4,     6, 3, 1, bias=False),
             nn.BatchNorm2d(ndf * 4),
             nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(ndf * 4, ndf * 8,     5, 3, 1, bias=False),
+            nn.Conv2d(ndf * 4, ndf * 8,     6, 3, 1, bias=False),
             nn.BatchNorm2d(ndf * 8),
             nn.LeakyReLU(0.2, inplace=True),
 
@@ -48,15 +48,15 @@ class Generator(nn.Module):
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d( ngf * 8, ngf * 4, 5, 3, 1, bias=False),
+            nn.ConvTranspose2d( ngf * 8, ngf * 4, 6, 3, 1, bias=False),
             nn.BatchNorm2d(ngf * 4),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d( ngf * 4, ngf * 2, 5, 3, 1, bias=False),
+            nn.ConvTranspose2d( ngf * 4, ngf * 2, 6, 3, 1, bias=False),
             nn.BatchNorm2d(ngf * 2),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d( ngf * 2, ngf * 1, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d( ngf * 2, ngf * 1, 5, 2, 1, bias=False),
             nn.BatchNorm2d(ngf * 1),
             nn.ReLU(True),
 

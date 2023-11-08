@@ -644,9 +644,9 @@ class MetFiveCornerDataset(Dataset):
 
 class CachedDataset(Dataset):
 
-    uncropped_size = 240
+    cropped_size = 198
 
-    cropped_size = 180
+    uncropped_size = cropped_size // 2 * 3
 
     tensorify = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
@@ -695,6 +695,17 @@ class CachedDataset(Dataset):
                 torchvision.transforms.RandomHorizontalFlip(0.5),
             ]),
         ] * 3
+
+        self.transforms += [
+            # Random crop and jitter
+            torchvision.transforms.Compose([
+                torchvision.transforms.Resize(self.uncropped_size),
+                torchvision.transforms.RandomCrop(self.cropped_size),
+                torchvision.transforms.ColorJitter(brightness=(0.5,1.5), contrast=(1), saturation=(0.5,1.5), hue=(-0.1,0.1)),
+                torchvision.transforms.RandomAdjustSharpness(1.5),
+                torchvision.transforms.RandomHorizontalFlip(0.5),
+            ]),
+        ] * 2
 
 
         os.makedirs(self.cache_dir, exist_ok=True)
