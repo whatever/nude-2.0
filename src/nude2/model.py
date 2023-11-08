@@ -14,26 +14,22 @@ class Discriminator(nn.Module):
 
         self.main = nn.Sequential(
 
-            nn.Conv2d(nc, ndf, 4, 2, 2, bias=False),
+            nn.Conv2d(nc, ndf,              4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
 
-            # state size. ``(ndf) x 32 x 32``
-            nn.Conv2d(ndf, ndf * 2, 4, 3, 2, bias=False),
+            nn.Conv2d(ndf, ndf * 2,         4, 2, 1, bias=False),
             nn.BatchNorm2d(ndf * 2),
             nn.LeakyReLU(0.2, inplace=True),
 
-            # state size. ``(ndf*2) x 16 x 16``
-            nn.Conv2d(ndf * 2, ndf * 4, 4, 3, 1, bias=False),
+            nn.Conv2d(ndf * 2, ndf * 4,     5, 3, 1, bias=False),
             nn.BatchNorm2d(ndf * 4),
             nn.LeakyReLU(0.2, inplace=True),
 
-            # state size. ``(ndf*4) x 8 x 8``
-            nn.Conv2d(ndf * 4, ndf * 8, 5, 3, 1, bias=False),
+            nn.Conv2d(ndf * 4, ndf * 8,     5, 3, 1, bias=False),
             nn.BatchNorm2d(ndf * 8),
             nn.LeakyReLU(0.2, inplace=True),
 
-            # state size. ``(ndf*8) x 4 x 4``
-            nn.Conv2d(ndf * 8, 1, 5, 3, 0, bias=False),
+            nn.Conv2d(ndf * 8, 1,           5, 2, 0, bias=False),
             nn.Sigmoid(),
         )
 
@@ -48,7 +44,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
 
         self.main = nn.Sequential(
-            nn.ConvTranspose2d( nz, ngf * 8, 5, 3, 0, bias=False),
+            nn.ConvTranspose2d( nz,      ngf * 8, 5, 2, 0, bias=False),
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
 
@@ -56,22 +52,17 @@ class Generator(nn.Module):
             nn.BatchNorm2d(ngf * 4),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d( ngf * 4, ngf * 2, 4, 3, 1, bias=False),
+            nn.ConvTranspose2d( ngf * 4, ngf * 2, 5, 3, 1, bias=False),
             nn.BatchNorm2d(ngf * 2),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d( ngf * 2, ngf * 1, 4, 3, 2, bias=False),
+            nn.ConvTranspose2d( ngf * 2, ngf * 1, 4, 2, 1, bias=False),
             nn.BatchNorm2d(ngf * 1),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d( ngf * 1, nc, 4, 2, 2, bias=False),
-            nn.ReLU(True),
+            nn.ConvTranspose2d( ngf * 1, nc,      4, 2, 1, bias=False),
+            nn.Tanh(),
         )
-
-        """
-            
-        )
-        """
 
 
     def forward(self, input):

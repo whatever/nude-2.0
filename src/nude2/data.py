@@ -644,9 +644,9 @@ class MetFiveCornerDataset(Dataset):
 
 class CachedDataset(Dataset):
 
-    uncropped_size = 384
+    uncropped_size = 240
 
-    cropped_size = 256
+    cropped_size = 180
 
     tensorify = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
@@ -732,7 +732,6 @@ class CachedDataset(Dataset):
             with PIL.Image.open(fname) as img:
                 for j, t in enumerate(self.transforms):
                     img = t(img.convert("RGB"))
-                    arr = self.tensorify(img)
 
                     with tempfile.NamedTemporaryFile(prefix="image-", suffix=".jpg", delete=False) as fo:
                         img.save(fo.name)
