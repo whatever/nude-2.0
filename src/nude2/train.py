@@ -59,10 +59,10 @@ def main(data_folder, num_epochs, batch_size, checkpoint_path, samples_path, see
     print("========")
     print(f"data .......... \033[95m{data_dir}\033[00m")
     print(f"epochs ........ \033[96m{num_epochs}\033[00m")
-    print(f"batch size .... \033[97m{batch_size}\033[00m")
-    print(f"device ........ \033[98m{device}\033[00m")
-    print(f"checkpoint .... \033[99m{checkpoint_path}\033[00m")
-    print(f"samples path .. \033[100m{samples_path}\033[00m")
+    print(f"batch size .... \033[95m{batch_size}\033[00m")
+    print(f"device ........ \033[95m{device}\033[00m")
+    print(f"checkpoint .... \033[95m{checkpoint_path}\033[00m")
+    print(f"samples path .. \033[95m{samples_path}\033[00m")
     print()
 
     if samples_path is not None:

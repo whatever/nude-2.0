@@ -644,7 +644,7 @@ class MetFiveCornerDataset(Dataset):
 
 class CachedDataset(Dataset):
 
-    cropped_size = 224
+    cropped_size = 198
 
     uncropped_size = cropped_size // 2 * 3
 
