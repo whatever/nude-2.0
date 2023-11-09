@@ -5,7 +5,7 @@ import unittest
 from nude2.train import Generator, Discriminator
 
 
-WIDTH = HEIGHT = 198
+WIDTH = HEIGHT = 224
 
 
 class ModuleShapeTest(unittest.TestCase):
@@ -20,7 +20,7 @@ class ModuleShapeTest(unittest.TestCase):
 
         self.assertEqual(
             r.shape,
-            (10, 3, 198, 198),
+            (10, 3, WIDTH, HEIGHT),
         )
 
     def test_discriminator_shape(self):
