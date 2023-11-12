@@ -5,7 +5,7 @@ import unittest
 from nude2.train import Generator, Discriminator
 
 
-WIDTH = HEIGHT = 128
+WIDTH = HEIGHT = 64
 
 
 class ModuleShapeTest(unittest.TestCase):
