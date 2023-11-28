@@ -115,14 +115,22 @@ def main2(samples_path, out):
 
 
 def main(checkpoint_path, samples_path):
-    states = torch.load(checkpoint_path)
+    states = torch.load(
+        checkpoint_path,
+        map_location=torch.device('cpu'),
+    )
 
     g = Generator198x198()
     g.load_state_dict(states["g"])
+    g.eval()
 
-    noise = torch.rand(68, 100, 1, 1)
+    batch_size = 64
 
-    for i in range(68):
+    # noise = torch.rand(batch_size, 100, 1, 1)
+    noise = torch.ones(batch_size, 100, 1, 1)
+    noise = torch.rand(batch_size, 100, 1, 1)
+
+    for i in range(batch_size):
         out = g(noise)
         img = nude2.data.MetCenterCroppedDataset.pilify(out[i])
         img.save(os.path.join(samples_path, f"sample-{i}.jpg"))
