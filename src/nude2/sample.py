@@ -1,11 +1,18 @@
 import PIL
 import os.path
+import torch
+
+import torch.nn as nn
 
 from glob import glob
 
 from collections import defaultdict
 import itertools
 import subprocess
+import random
+
+from nude2.model import Generator198x198
+import nude2.data
 
 
 def gridify(images, nrows, ncols):
@@ -55,7 +62,7 @@ def main2(checkpoint_path):
     elpapa.save("colsamps/yikes.png")
 
 
-def main(samples_path, out):
+def main2(samples_path, out):
 
     fnames = sorted(glob(os.path.join(samples_path, "*.jpg")))
 
@@ -106,3 +113,24 @@ def main(samples_path, out):
            out.mp4
     """
 
+
+def main(checkpoint_path, samples_path):
+    states = torch.load(
+        checkpoint_path,
+        map_location=torch.device('cpu'),
+    )
+
+    g = Generator198x198()
+    g.load_state_dict(states["g"])
+    g.eval()
+
+    batch_size = 64
+
+    # noise = torch.rand(batch_size, 100, 1, 1)
+    noise = torch.ones(batch_size, 100, 1, 1)
+    noise = torch.rand(batch_size, 100, 1, 1)
+
+    for i in range(batch_size):
+        out = g(noise)
+        img = nude2.data.MetCenterCroppedDataset.pilify(out[i])
+        img.save(os.path.join(samples_path, f"sample-{i}.jpg"))

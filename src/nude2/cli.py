@@ -4,9 +4,12 @@ import nude2.benchmark
 import nude2.browse
 import nude2.data
 import nude2.generate
+import nude2.onnxify
 import nude2.progress
 import nude2.sample
 import nude2.train
+
+import nude2
 
 def main():
     parser = argparse.ArgumentParser()
@@ -35,10 +38,18 @@ def main():
     generate_parser.add_argument("--checkpoint", type=str)
     generate_parser.add_argument("--samples", type=str)
 
+    video_parser = subparsers.add_parser("video")
+    video_parser.add_argument("--checkpoint", type=str)
+    video_parser.add_argument("--samples", type=str)
+    video_parser.add_argument("-o", "--out", type=str)
+
     sample_parser = subparsers.add_parser("sample")
     sample_parser.add_argument("--checkpoint", type=str)
     sample_parser.add_argument("--samples", type=str)
-    sample_parser.add_argument("-o", "--out", type=str)
+
+    onnxify_parser = subparsers.add_parser("onnxify")
+    onnxify_parser.add_argument("--checkpoint", type=str)
+    onnxify_parser.add_argument("-o", "--output", type=str)
 
     args = parser.parse_args()
 
@@ -59,8 +70,14 @@ def main():
             args.samples_path,
             seed=args.seed,
         )
+    elif args.command == "onnxify":
+        nude2.onnxify.main(
+            args.checkpoint,
+            args.output,
+        )
     elif args.command == "generate":
         nude2.generate.main(args.checkpoint)
-    elif args.command == "sample":
+    elif args.command == "video":
         nude2.sample.main(args.samples, args.out)
-
+    elif args.command == "sample":
+        nude2.sample.main(args.checkpoint, args.samples)

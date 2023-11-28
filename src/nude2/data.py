@@ -549,9 +549,9 @@ class MetCenterCroppedDataset(Dataset):
 class MetFiveCornerDataset(Dataset):
     """Five corners + flip"""
 
-    uncropped_size = 96
+    uncropped_size = 256
 
-    cropped_size = 64
+    cropped_size = 128
 
     tencrop = torchvision.transforms.Compose([
         torchvision.transforms.Resize(uncropped_size),
@@ -644,9 +644,9 @@ class MetFiveCornerDataset(Dataset):
 
 class CachedDataset(Dataset):
 
-    uncropped_size = 64
-
     cropped_size = 64
+
+    uncropped_size = cropped_size // 2 * 3
 
     tensorify = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
@@ -690,16 +690,25 @@ class CachedDataset(Dataset):
         self.transforms += [
             # Random crop and jitter
             torchvision.transforms.Compose([
-                torchvision.transforms.Resize(self.uncropped_size, antialias=False),
-                torchvision.transforms.CenterCrop(self.cropped_size),
-                torchvision.transforms.RandomHorizontalFlip(0.5),
+                torchvision.transforms.Resize(self.uncropped_size),
                 torchvision.transforms.RandomCrop(self.cropped_size),
+                torchvision.transforms.RandomHorizontalFlip(0.5),
             ]),
         ] * 3
 
+        self.transforms += [
+            # Random crop and jitter
+            torchvision.transforms.Compose([
+                torchvision.transforms.Resize(self.uncropped_size),
+                torchvision.transforms.RandomCrop(self.cropped_size),
+                torchvision.transforms.ColorJitter(brightness=(0.5,1.5), contrast=(1), saturation=(0.5,1.5), hue=(-0.1,0.1)),
+                torchvision.transforms.RandomAdjustSharpness(1.5),
+                torchvision.transforms.RandomHorizontalFlip(0.5),
+            ]),
+        ] * 2
 
-        print("len =", len(self.transforms))
-        print("len =", len(self.image_fnames))
+
+        os.makedirs(self.cache_dir, exist_ok=True)
 
 
     def get_filename(self, idx):
@@ -734,7 +743,6 @@ class CachedDataset(Dataset):
             with PIL.Image.open(fname) as img:
                 for j, t in enumerate(self.transforms):
                     img = t(img.convert("RGB"))
-                    arr = self.tensorify(img)
 
                     with tempfile.NamedTemporaryFile(prefix="image-", suffix=".jpg", delete=False) as fo:
                         img.save(fo.name)
