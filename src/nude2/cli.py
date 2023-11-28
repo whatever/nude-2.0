@@ -35,10 +35,14 @@ def main():
     generate_parser.add_argument("--checkpoint", type=str)
     generate_parser.add_argument("--samples", type=str)
 
+    video_parser = subparsers.add_parser("video")
+    video_parser.add_argument("--checkpoint", type=str)
+    video_parser.add_argument("--samples", type=str)
+    video_parser.add_argument("-o", "--out", type=str)
+
     sample_parser = subparsers.add_parser("sample")
     sample_parser.add_argument("--checkpoint", type=str)
     sample_parser.add_argument("--samples", type=str)
-    sample_parser.add_argument("-o", "--out", type=str)
 
     args = parser.parse_args()
 
@@ -61,6 +65,7 @@ def main():
         )
     elif args.command == "generate":
         nude2.generate.main(args.checkpoint)
-    elif args.command == "sample":
+    elif args.command == "video":
         nude2.sample.main(args.samples, args.out)
-
+    elif args.command == "sample":
+        nude2.sample.main(args.checkpoint, args.samples)

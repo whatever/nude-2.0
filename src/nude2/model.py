@@ -68,3 +68,35 @@ class Generator(nn.Module):
 
     def forward(self, input):
         return self.main(input)
+
+
+class Generator198x198(nn.Module):
+    """Module to generate an image from a feature vector"""
+
+    def __init__(self):
+        super(Generator198x198, self).__init__()
+
+        self.main = nn.Sequential(
+            nn.ConvTranspose2d( nz,      ngf * 8, 5, 2, 0, bias=False),
+            nn.BatchNorm2d(ngf * 8),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d( ngf * 8, ngf * 4, 6, 3, 1, bias=False),
+            nn.BatchNorm2d(ngf * 4),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d( ngf * 4, ngf * 2, 6, 3, 1, bias=False),
+            nn.BatchNorm2d(ngf * 2),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d( ngf * 2, ngf * 1, 5, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf * 1),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d( ngf * 1, nc,      4, 2, 1, bias=False),
+            nn.Tanh(),
+        )
+
+
+    def forward(self, input):
+        return self.main(input)
