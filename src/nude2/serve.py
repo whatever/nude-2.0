@@ -2,6 +2,9 @@ import json
 import http.server
 import torch
 
+from nude2.model import Generator198x198, Generator
+from nude2.data import MetCenterCroppedDataset
+
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -21,7 +24,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 def main(checkpoint, port):
 
     print(f"loading checkpoint from {checkpoint}")
-    torch.load(checkpoint, map_location=torch.device('cpu'))
+    states = torch.load(checkpoint, map_location=torch.device('cpu'))
+
+    g = Generator198x198()
+    g = Generator()
+    g = g.to("cpu")
+    # g.load_state_dict(states["g"])
+
+    noise = torch.randn(1, 100, 1, 1).to("cpu")
+    print("<<<")
+    try:
+        arr = g(noise)
+    except Exception as e:
+        print(e)
+    print(">>>")
+    print(arr)
+    # img = MetCenterCroppedDataset.pilify(arr[0])
+    # img.save("/checkpoints/test.png")
 
     print(f"serving at port {port}")
     httpd = http.server.HTTPServer(("", port), Handler)

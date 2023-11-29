@@ -1,4 +1,9 @@
 Pillow==10.0.1
-torch==2.1.0
-torchvision==0.16.0
+onnx==1.15.0
+onnxruntime==1.16.3
+pytest==7.4.3
+# torch==2.1.0
+torch==2.0.1
+# torchvision==0.16.0
+torchvision==0.15.2
 tqdm==4.66.1
