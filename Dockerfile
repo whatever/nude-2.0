@@ -13,4 +13,6 @@ COPY setup.cfg pyproject.toml .
 COPY src src/
 RUN pip install -e .
 
-CMD ["python", "-m", "http.server", "8181"]
+RUN echo "start webserver here so we can put it on the nets"
+
+CMD ["nude", "serve-api", "--checkpoint", "/checkpoints/nude2-dcgan-met-random-crop-198x198.pt", "--port", "8181"]

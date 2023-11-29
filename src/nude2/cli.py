@@ -7,6 +7,7 @@ import nude2.generate
 import nude2.onnxify
 import nude2.progress
 import nude2.sample
+import nude2.serve
 import nude2.train
 
 import nude2
@@ -51,6 +52,10 @@ def main():
     onnxify_parser.add_argument("--checkpoint", type=str)
     onnxify_parser.add_argument("-o", "--output", type=str)
 
+    serve_parser = subparsers.add_parser("serve-api")
+    serve_parser.add_argument("--checkpoint", type=str)
+    serve_parser.add_argument("--port", type=int, default=8181)
+
     args = parser.parse_args()
 
     if args.command == "browse":
@@ -81,3 +86,5 @@ def main():
         nude2.sample.main(args.samples, args.out)
     elif args.command == "sample":
         nude2.sample.main(args.checkpoint, args.samples)
+    elif args.command == "serve-api":
+        nude2.serve.main(args.checkpoint, args.port)
