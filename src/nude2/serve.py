@@ -47,18 +47,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 def main(checkpoint, port):
 
-
     print(f"loading checkpoint from {checkpoint}")
     STATES = torch.load(checkpoint, map_location=torch.device('cpu'))
     GENERATOR.load_state_dict(STATES["g"])
     GENERATOR.train(False)
-
-
-    noise = torch.randn(1, 100, 1, 1).to("cpu")
-    arr = GENERATOR(noise)
-    img = MetCenterCroppedDataset.pilify(arr[0])
-    img.save("/checkpoints/test.png")
-    print(img)
 
     print(f"serving at port {port}")
     httpd = http.server.HTTPServer(("", port), Handler)
