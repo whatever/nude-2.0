@@ -12,7 +12,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
-COPY setup.cfg pyproject.toml .
+COPY setup.cfg pyproject.toml ./
 COPY src src/
 RUN pip3 install -e .
 RUN pip3 install requests
